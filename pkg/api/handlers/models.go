@@ -120,9 +120,17 @@ type NodeInfo struct {
 // NodeDetail represents detailed node information
 type NodeDetail struct {
 	NodeInfo
-	Conditions []NodeCondition `json:"conditions"`
-	Pods       []PodInfo       `json:"pods"`
-	Labels     map[string]string `json:"labels"`
+	Conditions   []NodeCondition       `json:"conditions"`
+	PodCount     int                   `json:"podCount"`
+	Labels       map[string]string     `json:"labels"`
+	Taints       []NodeTaint           `json:"taints"`
+	Addresses    []NodeAddress         `json:"addresses"`
+	Capacity     map[string]string     `json:"capacity"`
+	Allocatable  map[string]string     `json:"allocatable"`
+	SystemInfo   NodeSystemInfo        `json:"systemInfo"`
+	PodCIDR      string                `json:"podCIDR"`
+	PodCIDRs     []string              `json:"podCIDRs"`
+	Resources    NodeResources         `json:"resources"`
 }
 
 // NodeCondition represents a node condition
@@ -131,6 +139,43 @@ type NodeCondition struct {
 	Status  string `json:"status"`
 	Reason  string `json:"reason"`
 	Message string `json:"message"`
+}
+
+// NodeTaint represents a node taint
+type NodeTaint struct {
+	Key    string `json:"key"`
+	Value  string `json:"value"`
+	Effect string `json:"effect"`
+}
+
+// NodeAddress represents a node address
+type NodeAddress struct {
+	Type    string `json:"type"`
+	Address string `json:"address"`
+}
+
+// NodeSystemInfo represents system information about a node
+type NodeSystemInfo struct {
+	MachineID               string `json:"machineID"`
+	SystemUUID              string `json:"systemUUID"`
+	BootID                  string `json:"bootID"`
+	KernelVersion           string `json:"kernelVersion"`
+	OSImage                 string `json:"osImage"`
+	ContainerRuntimeVersion string `json:"containerRuntimeVersion"`
+	KubeletVersion          string `json:"kubeletVersion"`
+	KubeProxyVersion        string `json:"kubeProxyVersion"`
+	OperatingSystem         string `json:"operatingSystem"`
+	Architecture            string `json:"architecture"`
+}
+
+// NodeResources represents resource usage on a node
+type NodeResources struct {
+	CPURequests    string `json:"cpuRequests"`
+	CPULimits      string `json:"cpuLimits"`
+	MemoryRequests string `json:"memoryRequests"`
+	MemoryLimits   string `json:"memoryLimits"`
+	CPUPercent     int    `json:"cpuPercent"`
+	MemoryPercent  int    `json:"memoryPercent"`
 }
 
 type DaemonSetInfo struct {

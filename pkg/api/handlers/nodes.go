@@ -34,17 +34,29 @@ func GetNode(c *gin.Context) {
 		return
 	}
 
-	// Get pods on this node
+	// Get pods on this node and calculate resource usage
 	pods, err := k8s.InformerFactory.Core().V1().Pods().Lister().List(labels.Everything())
-	var nodePods []PodInfo
+	podCount := 0
+	var cpuRequests, cpuLimits, memRequests, memLimits int64
 	if err == nil {
 		for _, pod := range pods {
-			if pod.Spec.NodeName == name {
-				nodePods = append(nodePods, toPodInfo(pod))
+			if pod.Spec.NodeName == name && pod.Status.Phase != corev1.PodSucceeded && pod.Status.Phase != corev1.PodFailed {
+				podCount++
+				for _, container := range pod.Spec.Containers {
+					if container.Resources.Requests != nil {
+						cpuRequests += container.Resources.Requests.Cpu().MilliValue()
+						memRequests += container.Resources.Requests.Memory().Value()
+					}
+					if container.Resources.Limits != nil {
+						cpuLimits += container.Resources.Limits.Cpu().MilliValue()
+						memLimits += container.Resources.Limits.Memory().Value()
+					}
+				}
 			}
 		}
 	}
 
+	// Conditions
 	var conditions []NodeCondition
 	for _, cond := range node.Status.Conditions {
 		conditions = append(conditions, NodeCondition{
@@ -55,14 +67,102 @@ func GetNode(c *gin.Context) {
 		})
 	}
 
+	// Taints
+	var taints []NodeTaint
+	for _, t := range node.Spec.Taints {
+		taints = append(taints, NodeTaint{
+			Key:    t.Key,
+			Value:  t.Value,
+			Effect: string(t.Effect),
+		})
+	}
+
+	// Addresses
+	var addresses []NodeAddress
+	for _, addr := range node.Status.Addresses {
+		addresses = append(addresses, NodeAddress{
+			Type:    string(addr.Type),
+			Address: addr.Address,
+		})
+	}
+
+	// Capacity
+	capacity := make(map[string]string)
+	for k, v := range node.Status.Capacity {
+		capacity[string(k)] = v.String()
+	}
+
+	// Allocatable
+	allocatable := make(map[string]string)
+	for k, v := range node.Status.Allocatable {
+		allocatable[string(k)] = v.String()
+	}
+
+	// System Info
+	sysInfo := NodeSystemInfo{
+		MachineID:               node.Status.NodeInfo.MachineID,
+		SystemUUID:              node.Status.NodeInfo.SystemUUID,
+		BootID:                  node.Status.NodeInfo.BootID,
+		KernelVersion:           node.Status.NodeInfo.KernelVersion,
+		OSImage:                 node.Status.NodeInfo.OSImage,
+		ContainerRuntimeVersion: node.Status.NodeInfo.ContainerRuntimeVersion,
+		KubeletVersion:          node.Status.NodeInfo.KubeletVersion,
+		KubeProxyVersion:        node.Status.NodeInfo.KubeProxyVersion,
+		OperatingSystem:         node.Status.NodeInfo.OperatingSystem,
+		Architecture:            node.Status.NodeInfo.Architecture,
+	}
+
+	// Calculate percentages
+	allocatableCPU := node.Status.Allocatable.Cpu().MilliValue()
+	allocatableMem := node.Status.Allocatable.Memory().Value()
+	cpuPercent := 0
+	memPercent := 0
+	if allocatableCPU > 0 {
+		cpuPercent = int((cpuRequests * 100) / allocatableCPU)
+	}
+	if allocatableMem > 0 {
+		memPercent = int((memRequests * 100) / allocatableMem)
+	}
+
+	resources := NodeResources{
+		CPURequests:    fmt.Sprintf("%dm", cpuRequests),
+		CPULimits:      fmt.Sprintf("%dm", cpuLimits),
+		MemoryRequests: formatBytes(memRequests),
+		MemoryLimits:   formatBytes(memLimits),
+		CPUPercent:     cpuPercent,
+		MemoryPercent:  memPercent,
+	}
+
 	detail := NodeDetail{
-		NodeInfo:   toNodeInfo(node),
-		Conditions: conditions,
-		Pods:       nodePods,
-		Labels:     node.Labels,
+		NodeInfo:    toNodeInfo(node),
+		Conditions:  conditions,
+		PodCount:    podCount,
+		Labels:      node.Labels,
+		Taints:      taints,
+		Addresses:   addresses,
+		Capacity:    capacity,
+		Allocatable: allocatable,
+		SystemInfo:  sysInfo,
+		PodCIDR:     node.Spec.PodCIDR,
+		PodCIDRs:    node.Spec.PodCIDRs,
+		Resources:   resources,
 	}
 
 	c.JSON(http.StatusOK, detail)
+}
+
+// formatBytes converts bytes to human readable format
+func formatBytes(bytes int64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%dB", bytes)
+	}
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.0f%ci", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
 func toNodeInfo(node *corev1.Node) NodeInfo {

@@ -146,7 +146,7 @@
         }
 
         .table-container {
-            max-height: calc(100vh - 200px);
+            max-height: calc(100vh - 140px);
             overflow-y: auto;
         }
 
@@ -360,6 +360,11 @@
 
         .light #detail-modal .text-green-400 {
             color: #16a34a !important;
+        }
+
+        /* Dark mode - use cyan instead of blue for better readability */
+        :not(.light) .text-k8s-blue {
+            color: #22d3ee !important;
         }
 
         .light #detail-modal .text-red-400 {
@@ -1093,39 +1098,115 @@
                 document.getElementById('modal-title').textContent = `Node: ${name}`;
                 document.getElementById('modal-content').innerHTML = `
                     <div class="space-y-4">
-                        <div>
-                            <h3 class="font-semibold mb-2">Conditions</h3>
-                            <table class="w-full text-sm">
-                                <thead class="bg-slate-700">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left">Type</th>
-                                        <th class="px-3 py-2 text-left">Status</th>
-                                        <th class="px-3 py-2 text-left">Reason</th>
-                                        <th class="px-3 py-2 text-left">Message</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-700">
-                                    ${data.conditions?.map(c => `
-                                        <tr>
-                                            <td class="px-3 py-2">${c.type}</td>
-                                            <td class="px-3 py-2 ${c.status === 'True' ? 'text-green-500' : 'text-slate-400'}">${c.status}</td>
-                                            <td class="px-3 py-2">${c.reason || '-'}</td>
-                                            <td class="px-3 py-2 text-xs">${c.message || '-'}</td>
-                                        </tr>
-                                    `).join('') || ''}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div>
-                            <h3 class="font-semibold mb-2">Pods on this node (${data.pods?.length || 0})</h3>
-                            <div class="max-h-48 overflow-y-auto">
-                                ${data.pods?.map(p => `<div class="px-3 py-1 text-sm">${p.namespace}/${p.name} - <span class="${statusClass(p.status)}">${p.status}</span></div>`).join('') || 'No pods'}
+                        <!-- Basic Info & Resource Usage -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-slate-700 rounded p-4">
+                                <h3 class="text-sm font-semibold text-k8s-blue mb-3">Basic Information</h3>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between"><span class="text-slate-400">Status:</span> <span class="${data.status === 'Ready' ? 'text-green-400' : 'text-red-400'}">${data.status}</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-400">Roles:</span> <span>${data.roles?.join(', ') || '-'}</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-400">Version:</span> <span>${data.version}</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-400">Age:</span> <span>${data.age}</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-400">Pods:</span> <span>${data.podCount} running</span></div>
+                                </div>
+                            </div>
+                            <div class="bg-slate-700 rounded p-4">
+                                <h3 class="text-sm font-semibold text-k8s-blue mb-3">Resource Usage</h3>
+                                <div class="space-y-3 text-sm">
+                                    <div>
+                                        <div class="flex justify-between mb-1"><span class="text-slate-400">CPU:</span> <span>${data.resources?.cpuRequests} / ${data.allocatable?.cpu} (${data.resources?.cpuPercent}%)</span></div>
+                                        <div class="w-full bg-slate-600 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full" style="width: ${Math.min(data.resources?.cpuPercent || 0, 100)}%"></div></div>
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between mb-1"><span class="text-slate-400">Memory:</span> <span>${data.resources?.memoryRequests} / ${data.allocatable?.memory} (${data.resources?.memoryPercent}%)</span></div>
+                                        <div class="w-full bg-slate-600 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full" style="width: ${Math.min(data.resources?.memoryPercent || 0, 100)}%"></div></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div>
-                            <h3 class="font-semibold mb-2">Labels</h3>
+
+                        <!-- Addresses -->
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Addresses</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                ${data.addresses?.map(a => `<div><span class="text-slate-400">${a.type}:</span> <span class="text-white">${a.address}</span></div>`).join('') || '-'}
+                                <div><span class="text-slate-400">PodCIDR:</span> <span class="text-white">${data.podCIDR || '-'}</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Capacity & Allocatable -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-slate-700 rounded p-4">
+                                <h3 class="text-sm font-semibold text-k8s-blue mb-3">Capacity</h3>
+                                <div class="space-y-1 text-sm">
+                                    ${Object.entries(data.capacity || {}).map(([k, v]) => `<div class="flex justify-between"><span class="text-slate-400">${k}:</span> <span>${v}</span></div>`).join('')}
+                                </div>
+                            </div>
+                            <div class="bg-slate-700 rounded p-4">
+                                <h3 class="text-sm font-semibold text-k8s-blue mb-3">Allocatable</h3>
+                                <div class="space-y-1 text-sm">
+                                    ${Object.entries(data.allocatable || {}).map(([k, v]) => `<div class="flex justify-between"><span class="text-slate-400">${k}:</span> <span>${v}</span></div>`).join('')}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- System Info -->
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">System Info</h3>
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div><span class="text-slate-400">OS Image:</span> ${data.systemInfo?.osImage || '-'}</div>
+                                <div><span class="text-slate-400">Kernel:</span> ${data.systemInfo?.kernelVersion || '-'}</div>
+                                <div><span class="text-slate-400">Container Runtime:</span> ${data.systemInfo?.containerRuntimeVersion || '-'}</div>
+                                <div><span class="text-slate-400">Kubelet:</span> ${data.systemInfo?.kubeletVersion || '-'}</div>
+                                <div><span class="text-slate-400">OS:</span> ${data.systemInfo?.operatingSystem || '-'}</div>
+                                <div><span class="text-slate-400">Architecture:</span> ${data.systemInfo?.architecture || '-'}</div>
+                                <div class="col-span-2"><span class="text-slate-400">Machine ID:</span> <span class="text-xs">${data.systemInfo?.machineID || '-'}</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Taints -->
+                        ${data.taints?.length > 0 ? `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Taints (${data.taints.length})</h3>
+                            <div class="space-y-2">
+                                ${data.taints.map(t => `
+                                    <div class="flex items-center gap-2 text-sm">
+                                        <span class="px-2 py-1 rounded text-xs ${t.effect === 'NoSchedule' ? 'bg-yellow-600/50' : t.effect === 'NoExecute' ? 'bg-red-600/50' : 'bg-blue-600/50'}">${t.effect}</span>
+                                        <span><span class="text-slate-400">${t.key}</span>${t.value ? `=<span class="text-white">${t.value}</span>` : ''}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <!-- Conditions -->
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Conditions</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-xs">
+                                    <thead><tr class="text-slate-400 border-b border-slate-600">
+                                        <th class="text-left p-2">Type</th>
+                                        <th class="text-left p-2">Status</th>
+                                        <th class="text-left p-2">Reason</th>
+                                    </tr></thead>
+                                    <tbody>
+                                        ${data.conditions?.map(c => `
+                                            <tr class="border-b border-slate-600/50">
+                                                <td class="p-2">${c.type}</td>
+                                                <td class="p-2 ${c.status === 'True' ? 'text-green-400' : c.status === 'False' ? 'text-slate-400' : 'text-yellow-400'}">${c.status}</td>
+                                                <td class="p-2 text-slate-400">${c.reason || '-'}</td>
+                                            </tr>
+                                        `).join('') || ''}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Labels -->
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Labels</h3>
                             <div class="flex flex-wrap gap-1">
-                                ${Object.entries(data.labels || {}).map(([k, v]) => `<span class="px-2 py-1 bg-slate-700 rounded text-xs">${k}=${v}</span>`).join('') || 'None'}
+                                ${Object.entries(data.labels || {}).map(([k, v]) => `<span class="px-2 py-1 bg-slate-600 rounded text-xs">${k}=${v}</span>`).join('') || 'None'}
                             </div>
                         </div>
                     </div>
@@ -1154,12 +1235,14 @@
                     { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
                     { label: 'Status', key: 'status', render: r => `<span class="${statusClass(r.status)}">${r.status}</span>` },
                     { label: 'Ready', key: 'ready' },
-                    { label: 'Restarts', key: 'restarts' },
                     { label: 'Node', key: 'node' },
                     { label: 'Age', key: 'age', class: 'text-slate-400' }
                 ], getItems(data), r => `
                             <button onclick="viewLogs('${r.namespace}', '${r.name}')" class="text-blue-400 hover:text-blue-300 mr-2" title="View Logs">
                                 <i class="fas fa-file-alt"></i>
+                            </button>
+                            <button onclick="editPod('${r.namespace}', '${r.name}')" class="text-green-400 hover:text-green-300 mr-2" title="Edit">
+                                <i class="fas fa-edit"></i>
                             </button>
                             <button onclick="deletePod('${r.namespace}', '${r.name}')" class="text-red-400 hover:text-red-300" title="Delete">
                                 <i class="fas fa-trash"></i>
@@ -1375,6 +1458,174 @@
             }
         }
 
+        // Edit functions
+        async function editPod(namespace, name) {
+            try {
+                const data = await fetch(`${API_BASE}/api/pods/${namespace}/${name}`).then(r => r.json());
+                const labels = data.metadata?.labels || {};
+                const annotations = data.metadata?.annotations || {};
+
+                document.getElementById('modal-title').textContent = `Edit Pod: ${namespace}/${name}`;
+                document.getElementById('modal-content').innerHTML = `
+                    <div class="space-y-4">
+                        <p class="text-slate-400 text-sm">Note: Pods have limited edit options. Only labels and annotations can be modified.</p>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Labels (JSON format)</label>
+                            <textarea id="edit-pod-labels" class="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 h-32 font-mono text-sm">${JSON.stringify(labels, null, 2)}</textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Annotations (JSON format)</label>
+                            <textarea id="edit-pod-annotations" class="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 h-32 font-mono text-sm">${JSON.stringify(annotations, null, 2)}</textarea>
+                        </div>
+                        <div class="flex justify-end gap-2 pt-4">
+                            <button onclick="closeModal()" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded">Cancel</button>
+                            <button onclick="savePod('${namespace}', '${name}')" class="px-4 py-2 bg-green-600 hover:bg-green-500 rounded">Save</button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('detail-modal').classList.remove('hidden');
+            } catch (err) {
+                alert('Error loading pod: ' + err.message);
+            }
+        }
+
+        async function savePod(namespace, name) {
+            try {
+                const labels = JSON.parse(document.getElementById('edit-pod-labels').value);
+                const annotations = JSON.parse(document.getElementById('edit-pod-annotations').value);
+
+                await fetch(`${API_BASE}/api/pods/${namespace}/${name}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ labels, annotations })
+                });
+                closeModal();
+                refreshCurrentView();
+            } catch (err) {
+                alert('Error saving pod: ' + err.message);
+            }
+        }
+
+        async function editDeployment(namespace, name) {
+            try {
+                const data = await fetch(`${API_BASE}/api/deployments/${namespace}/${name}`).then(r => r.json());
+                const replicas = data.spec?.replicas || 1;
+                const image = data.spec?.template?.spec?.containers?.[0]?.image || '';
+                const labels = data.metadata?.labels || {};
+                const annotations = data.metadata?.annotations || {};
+
+                document.getElementById('modal-title').textContent = `Edit Deployment: ${namespace}/${name}`;
+                document.getElementById('modal-content').innerHTML = `
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Replicas</label>
+                                <input type="number" id="edit-deploy-replicas" value="${replicas}" min="0" class="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Image</label>
+                                <input type="text" id="edit-deploy-image" value="${image}" class="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Labels (JSON format)</label>
+                            <textarea id="edit-deploy-labels" class="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 h-24 font-mono text-sm">${JSON.stringify(labels, null, 2)}</textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Annotations (JSON format)</label>
+                            <textarea id="edit-deploy-annotations" class="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 h-24 font-mono text-sm">${JSON.stringify(annotations, null, 2)}</textarea>
+                        </div>
+                        <div class="flex justify-end gap-2 pt-4">
+                            <button onclick="closeModal()" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded">Cancel</button>
+                            <button onclick="saveDeployment('${namespace}', '${name}')" class="px-4 py-2 bg-green-600 hover:bg-green-500 rounded">Save</button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('detail-modal').classList.remove('hidden');
+            } catch (err) {
+                alert('Error loading deployment: ' + err.message);
+            }
+        }
+
+        async function saveDeployment(namespace, name) {
+            try {
+                const replicas = parseInt(document.getElementById('edit-deploy-replicas').value);
+                const image = document.getElementById('edit-deploy-image').value;
+                const labels = JSON.parse(document.getElementById('edit-deploy-labels').value);
+                const annotations = JSON.parse(document.getElementById('edit-deploy-annotations').value);
+
+                await fetch(`${API_BASE}/api/deployments/${namespace}/${name}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ replicas, image, labels, annotations })
+                });
+                closeModal();
+                refreshCurrentView();
+            } catch (err) {
+                alert('Error saving deployment: ' + err.message);
+            }
+        }
+
+        async function editStatefulSet(namespace, name) {
+            try {
+                const data = await fetch(`${API_BASE}/api/statefulsets/${namespace}/${name}`).then(r => r.json());
+                const replicas = data.spec?.replicas || 1;
+                const image = data.spec?.template?.spec?.containers?.[0]?.image || '';
+                const labels = data.metadata?.labels || {};
+                const annotations = data.metadata?.annotations || {};
+
+                document.getElementById('modal-title').textContent = `Edit StatefulSet: ${namespace}/${name}`;
+                document.getElementById('modal-content').innerHTML = `
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Replicas</label>
+                                <input type="number" id="edit-sts-replicas" value="${replicas}" min="0" class="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Image</label>
+                                <input type="text" id="edit-sts-image" value="${image}" class="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Labels (JSON format)</label>
+                            <textarea id="edit-sts-labels" class="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 h-24 font-mono text-sm">${JSON.stringify(labels, null, 2)}</textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Annotations (JSON format)</label>
+                            <textarea id="edit-sts-annotations" class="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 h-24 font-mono text-sm">${JSON.stringify(annotations, null, 2)}</textarea>
+                        </div>
+                        <div class="flex justify-end gap-2 pt-4">
+                            <button onclick="closeModal()" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded">Cancel</button>
+                            <button onclick="saveStatefulSet('${namespace}', '${name}')" class="px-4 py-2 bg-green-600 hover:bg-green-500 rounded">Save</button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('detail-modal').classList.remove('hidden');
+            } catch (err) {
+                alert('Error loading statefulset: ' + err.message);
+            }
+        }
+
+        async function saveStatefulSet(namespace, name) {
+            try {
+                const replicas = parseInt(document.getElementById('edit-sts-replicas').value);
+                const image = document.getElementById('edit-sts-image').value;
+                const labels = JSON.parse(document.getElementById('edit-sts-labels').value);
+                const annotations = JSON.parse(document.getElementById('edit-sts-annotations').value);
+
+                await fetch(`${API_BASE}/api/statefulsets/${namespace}/${name}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ replicas, image, labels, annotations })
+                });
+                closeModal();
+                refreshCurrentView();
+            } catch (err) {
+                alert('Error saving statefulset: ' + err.message);
+            }
+        }
+
         function viewLogs(namespace, pod) {
             navigate('logs', { namespace, pod });
         }
@@ -1475,6 +1726,9 @@
                     { label: 'Available', key: 'available' },
                     { label: 'Age', key: 'age', class: 'text-slate-400' }
                 ], getItems(data), r => `
+                    <button onclick="editDeployment('${r.namespace}', '${r.name}')" class="text-green-400 hover:text-green-300 mr-2" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
                     <button onclick="scaleDeployment('${r.namespace}', '${r.name}')" class="text-blue-400 hover:text-blue-300 mr-2" title="Scale">
                         <i class="fas fa-expand-arrows-alt"></i>
                     </button>
@@ -1637,6 +1891,9 @@
                     { label: 'Ready', key: 'ready' },
                     { label: 'Age', key: 'age', class: 'text-slate-400' }
                 ], getItems(data), r => `
+                    <button onclick="editStatefulSet('${r.namespace}', '${r.name}')" class="text-green-400 hover:text-green-300 mr-2" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
                     <button onclick="scaleStatefulSet('${r.namespace}', '${r.name}')" class="text-blue-400 hover:text-blue-300 mr-2" title="Scale">
                         <i class="fas fa-expand-arrows-alt"></i>
                     </button>
@@ -1777,7 +2034,7 @@
                     { label: 'Type', key: 'type' },
                     { label: 'Cluster IP', key: 'clusterIP' },
                     { label: 'External IP', key: 'externalIP' },
-                    { label: 'Ports', key: 'ports', render: r => r.ports?.join(', ') || '-' },
+                    { label: 'Ports', key: 'ports' },
                     { label: 'Age', key: 'age', class: 'text-slate-400' }
                 ], getItems(data))}
                     </div>
@@ -1803,7 +2060,7 @@
                     { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
                     { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
                     { label: 'Class', key: 'class' },
-                    { label: 'Hosts', key: 'hosts', render: r => r.hosts?.join(', ') || '-' },
+                    { label: 'Hosts', key: 'hosts' },
                     { label: 'Address', key: 'address' },
                     { label: 'Age', key: 'age', class: 'text-slate-400' }
                 ], getItems(data))}
@@ -2035,7 +2292,7 @@
                     </div>
                     <div class="bg-slate-800 rounded-lg border border-slate-700">
                         ${renderTable([
-                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('clusterroles', null, '${r.name}')">${r.name}</span>` },
                     { label: 'Rules', key: 'rules' },
                     { label: 'Age', key: 'age', class: 'text-slate-400' }
                 ], getItems(data))}
@@ -2059,7 +2316,7 @@
                     </div>
                     <div class="bg-slate-800 rounded-lg border border-slate-700">
                         ${renderTable([
-                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('clusterrolebindings', null, '${r.name}')">${r.name}</span>` },
                     { label: 'Role', key: 'role' },
                     { label: 'Subjects', key: 'subjects' },
                     { label: 'Age', key: 'age', class: 'text-slate-400' }
@@ -2270,10 +2527,85 @@
                 updateBreadcrumb(resourceType, name);
 
                 document.getElementById('modal-title').textContent = `${formatViewName(resourceType.replace(/s$/, ''))}: ${namespace ? namespace + '/' : ''}${name}`;
+
+                // Build structured content based on resource type
+                let structuredContent = '';
+
+                // Roles and ClusterRoles - show rules
+                if (resourceType === 'roles' || resourceType === 'clusterroles') {
+                    const rules = data.rules || [];
+                    structuredContent = `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Permissions (${rules.length} rules)</h3>
+                            ${rules.length > 0 ? `
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-xs">
+                                    <thead><tr class="text-slate-400 border-b border-slate-600">
+                                        <th class="text-left p-2">API Groups</th>
+                                        <th class="text-left p-2">Resources</th>
+                                        <th class="text-left p-2">Verbs</th>
+                                        <th class="text-left p-2">Resource Names</th>
+                                    </tr></thead>
+                                    <tbody>
+                                        ${rules.map(rule => `
+                                            <tr class="border-b border-slate-600/50">
+                                                <td class="p-2"><span class="text-purple-400">${(rule.apiGroups || ['*']).map(g => g || 'core').join(', ')}</span></td>
+                                                <td class="p-2"><span class="text-yellow-400">${(rule.resources || ['*']).join(', ')}</span></td>
+                                                <td class="p-2">${(rule.verbs || []).map(v => `<span class="px-1 py-0.5 rounded text-xs ${v === '*' ? 'bg-red-600' : 'bg-green-600/50'}">${v}</span>`).join(' ')}</td>
+                                                <td class="p-2 text-slate-400">${(rule.resourceNames || []).join(', ') || '-'}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                            ` : '<p class="text-slate-400 text-sm">No rules defined</p>'}
+                        </div>
+                    `;
+                }
+
+                // RoleBindings and ClusterRoleBindings - show roleRef and subjects
+                if (resourceType === 'rolebindings' || resourceType === 'clusterrolebindings') {
+                    const roleRef = data.roleRef || {};
+                    const subjects = data.subjects || [];
+                    structuredContent = `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Role Reference</h3>
+                            <div class="grid grid-cols-3 gap-4 text-sm">
+                                <div><span class="text-slate-400">Kind:</span> <span class="text-yellow-400">${roleRef.kind || '-'}</span></div>
+                                <div><span class="text-slate-400">Name:</span> <span class="text-white">${roleRef.name || '-'}</span></div>
+                                <div><span class="text-slate-400">API Group:</span> <span class="text-purple-400">${roleRef.apiGroup || 'rbac.authorization.k8s.io'}</span></div>
+                            </div>
+                        </div>
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Subjects (${subjects.length})</h3>
+                            ${subjects.length > 0 ? `
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-xs">
+                                    <thead><tr class="text-slate-400 border-b border-slate-600">
+                                        <th class="text-left p-2">Kind</th>
+                                        <th class="text-left p-2">Name</th>
+                                        <th class="text-left p-2">Namespace</th>
+                                    </tr></thead>
+                                    <tbody>
+                                        ${subjects.map(subj => `
+                                            <tr class="border-b border-slate-600/50">
+                                                <td class="p-2"><span class="px-2 py-0.5 rounded text-xs ${subj.kind === 'ServiceAccount' ? 'bg-blue-600/50' : subj.kind === 'User' ? 'bg-green-600/50' : 'bg-purple-600/50'}">${subj.kind}</span></td>
+                                                <td class="p-2 text-white">${subj.name}</td>
+                                                <td class="p-2 text-slate-400">${subj.namespace || '-'}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                            ` : '<p class="text-slate-400 text-sm">No subjects defined</p>'}
+                        </div>
+                    `;
+                }
+
                 document.getElementById('modal-content').innerHTML = `
                     <div class="space-y-4">
                         <div class="bg-slate-700 rounded p-4">
-                            <h3 class="text-sm font-semibold text-slate-400 mb-2">Metadata</h3>
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-2">Metadata</h3>
                             <div class="grid grid-cols-2 gap-2 text-sm">
                                 <div><span class="text-slate-400">Name:</span> ${data.metadata?.name || name}</div>
                                 ${namespace ? `<div><span class="text-slate-400">Namespace:</span> ${data.metadata?.namespace || namespace}</div>` : ''}
@@ -2281,9 +2613,10 @@
                                 <div><span class="text-slate-400">Created:</span> ${data.metadata?.creationTimestamp || '-'}</div>
                             </div>
                         </div>
+                        ${structuredContent}
                         ${data.metadata?.labels && Object.keys(data.metadata.labels).length > 0 ? `
                         <div class="bg-slate-700 rounded p-4">
-                            <h3 class="text-sm font-semibold text-slate-400 mb-2">Labels</h3>
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-2">Labels</h3>
                             <div class="flex flex-wrap gap-2">
                                 ${Object.entries(data.metadata.labels).map(([k, v]) => `
                                     <span class="px-2 py-1 bg-slate-600 rounded text-xs">${k}: ${v}</span>
@@ -2293,7 +2626,7 @@
                         ` : ''}
                         ${data.metadata?.annotations && Object.keys(data.metadata.annotations).length > 0 ? `
                         <div class="bg-slate-700 rounded p-4">
-                            <h3 class="text-sm font-semibold text-slate-400 mb-2">Annotations</h3>
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-2">Annotations</h3>
                             <div class="space-y-1 text-xs">
                                 ${Object.entries(data.metadata.annotations).slice(0, 10).map(([k, v]) => `
                                     <div><span class="text-slate-400">${k}:</span> ${String(v).substring(0, 100)}${String(v).length > 100 ? '...' : ''}</div>
@@ -2302,10 +2635,6 @@
                             </div>
                         </div>
                         ` : ''}
-                        <div class="bg-slate-700 rounded p-4">
-                            <h3 class="text-sm font-semibold text-slate-400 mb-2">Raw YAML</h3>
-                            <pre class="text-xs overflow-auto max-h-64 bg-slate-800 p-2 rounded">${JSON.stringify(data, null, 2)}</pre>
-                        </div>
                     </div>
                 `;
                 document.getElementById('detail-modal').classList.remove('hidden');
