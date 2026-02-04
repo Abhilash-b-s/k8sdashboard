@@ -1,0 +1,2370 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kubernetes Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        k8s: {
+                            blue: '#326ce5',
+                            darkblue: '#1a4d8f',
+                            bg: '#0f172a',
+                            sidebar: '#1e293b',
+                            card: '#1e293b',
+                            border: '#334155',
+                            hover: '#374151'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .log-container {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .status-running,
+        .status-ready,
+        .status-bound,
+        .status-active {
+            color: #22c55e;
+        }
+
+        .status-pending,
+        .status-waiting {
+            color: #eab308;
+        }
+
+        .status-failed,
+        .status-error,
+        .status-notready {
+            color: #ef4444;
+        }
+
+        .status-succeeded,
+        .status-completed {
+            color: #3b82f6;
+        }
+
+        .status-terminating {
+            color: #f97316;
+        }
+
+        .sidebar-section {
+            border-left: 3px solid transparent;
+            color: #e2e8f0;
+        }
+
+        .sidebar-section.active {
+            border-left-color: #326ce5;
+            background: rgba(50, 108, 229, 0.15);
+            color: #ffffff;
+        }
+
+        .sidebar-section.active i {
+            color: #326ce5 !important;
+        }
+
+        .sidebar-section:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.05);
+            color: #e2e8f0;
+        }
+
+        /* Light mode styles */
+        .light .sidebar-section {
+            color: #000000;
+        }
+
+        .light .sidebar-section.active {
+            background: rgba(50, 108, 229, 0.1);
+            color: #000000;
+        }
+
+        .light .sidebar-section:hover:not(.active) {
+            background: rgba(0, 0, 0, 0.05);
+            color: #000000;
+        }
+
+        .menu-badge {
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 10px;
+            background: #326ce5;
+        }
+
+        .circular-chart {
+            display: block;
+            margin: 10px auto;
+            max-width: 80%;
+        }
+
+        .circle-bg {
+            fill: none;
+            stroke: #334155;
+            stroke-width: 3.8;
+        }
+
+        .circle {
+            fill: none;
+            stroke-width: 2.8;
+            stroke-linecap: round;
+            animation: progress 1s ease-out forwards;
+        }
+
+        .circle-green {
+            stroke: #22c55e;
+        }
+
+        .circle-yellow {
+            stroke: #eab308;
+        }
+
+        .circle-blue {
+            stroke: #3b82f6;
+        }
+
+        @keyframes progress {
+            0% {
+                stroke-dasharray: 0 100;
+            }
+        }
+
+        .percentage {
+            fill: #e2e8f0;
+            font-size: 0.5em;
+            text-anchor: middle;
+        }
+
+        .table-container {
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+        }
+
+        .table-container table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .table-container thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .breadcrumb {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .breadcrumb .breadcrumb-category {
+            color: rgba(255, 255, 255, 0.75);
+            font-weight: 500;
+        }
+
+        .breadcrumb .breadcrumb-separator {
+            color: rgba(255, 255, 255, 0.5);
+            margin: 0 8px;
+        }
+
+        .breadcrumb .breadcrumb-current {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .breadcrumb a {
+            color: rgba(255, 255, 255, 0.85);
+            font-weight: 500;
+        }
+
+        .breadcrumb a:hover {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        /* Light mode overrides */
+        .light {
+            background-color: #f1f5f9 !important;
+            color: #1e293b !important;
+        }
+
+        .light #sidebar {
+            background-color: #ffffff !important;
+            border-color: #e2e8f0 !important;
+        }
+
+        .light #sidebar .border-slate-700 {
+            border-color: #e2e8f0 !important;
+        }
+
+        .light .bg-slate-700 {
+            background-color: #e2e8f0 !important;
+        }
+
+        .light .bg-slate-800 {
+            background-color: #ffffff !important;
+        }
+
+        .light .bg-slate-900 {
+            background-color: #f1f5f9 !important;
+        }
+
+        .light .border-slate-700 {
+            border-color: #e2e8f0 !important;
+        }
+
+        .light .text-slate-200 {
+            color: #334155 !important;
+        }
+
+        .light .text-slate-400 {
+            color: #64748b !important;
+        }
+
+        /* Sidebar specific - pure black text in light mode */
+        .light #sidebar .text-slate-400 {
+            color: #000000 !important;
+        }
+
+        .light .text-white {
+            color: #1e293b !important;
+        }
+
+        .light select {
+            background-color: #f1f5f9 !important;
+            border-color: #cbd5e1 !important;
+            color: #334155 !important;
+        }
+
+        .light ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        .light ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+        }
+
+        .light .hover\:bg-slate-700:hover {
+            background-color: #e2e8f0 !important;
+        }
+
+        /* Empty state styling */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            color: #64748b;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state-message {
+            color: #cbd5e1;
+            font-size: 0.875rem;
+        }
+
+        /* Dark theme - make grey colors white (only when NOT in light mode) */
+        :not(.light) .text-slate-400 {
+            color: #e2e8f0 !important;
+        }
+
+        :not(.light) .text-slate-300 {
+            color: #f1f5f9 !important;
+        }
+
+        /* Professional table header styling */
+        .table-header {
+            background: linear-gradient(180deg, #475569 0%, #334155 100%);
+            border-bottom: 2px solid #326ce5;
+        }
+
+        .table-header th {
+            color: #ffffff !important;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.75rem;
+            padding: 0.875rem 1rem;
+        }
+
+        .light .table-header {
+            background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%);
+            border-bottom: 2px solid #326ce5;
+        }
+
+        /* Light theme modal and detail styling */
+        .light .bg-slate-600 {
+            background-color: #f1f5f9 !important;
+        }
+
+        .light #detail-modal .bg-slate-700 {
+            background-color: #f8fafc !important;
+            border: 1px solid #e2e8f0;
+        }
+
+        .light #detail-modal .bg-slate-600 {
+            background-color: #f1f5f9 !important;
+            border: 1px solid #e2e8f0;
+        }
+
+        .light #detail-modal .text-white {
+            color: #1e293b !important;
+        }
+
+        .light #detail-modal .text-slate-400 {
+            color: #64748b !important;
+        }
+
+        .light #detail-modal .text-k8s-blue {
+            color: #2563eb !important;
+        }
+
+        .light #detail-modal .text-yellow-400 {
+            color: #d97706 !important;
+        }
+
+        .light #detail-modal .text-green-400 {
+            color: #16a34a !important;
+        }
+
+        .light #detail-modal .text-red-400 {
+            color: #dc2626 !important;
+        }
+
+        .light #detail-modal pre {
+            background-color: #e2e8f0 !important;
+            color: #334155 !important;
+        }
+
+        .light #detail-modal .bg-green-600 {
+            background-color: #16a34a !important;
+        }
+
+        .light #detail-modal .bg-red-600 {
+            background-color: #dc2626 !important;
+        }
+
+        .light .table-header th {
+            color: #1e293b !important;
+        }
+
+        .light .empty-state-title {
+            color: #475569;
+        }
+
+        .light .empty-state-message {
+            color: #64748b;
+        }
+
+        /* Table cell styles for Name and Namespace columns */
+        .cell-name {
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        .cell-namespace {
+            color: #ffffff;
+        }
+
+        .light .cell-name {
+            color: #1e293b;
+        }
+
+        .light .cell-namespace {
+            color: #1e293b;
+        }
+
+    </style>
+</head>
+
+<body class="bg-slate-900 text-slate-200 min-h-screen">
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="w-64 bg-slate-800 border-r border-slate-700 flex flex-col overflow-y-auto">
+            <!-- Logo -->
+            <div class="p-4 border-b border-slate-700 flex items-center space-x-3">
+                <svg class="w-8 h-8" viewBox="0 0 32 32" fill="none">
+                    <path d="M16 2L2 9v14l14 7 14-7V9L16 2z" fill="#326ce5" />
+                    <path d="M16 6l-8 4v8l8 4 8-4v-8l-8-4z" fill="#fff" />
+                </svg>
+                <span class="text-lg font-bold text-white">kubernetes</span>
+            </div>
+
+            <!-- Namespace Selector -->
+            <div class="p-3 border-b border-slate-700">
+                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <i class="fas fa-folder text-yellow-500"></i>
+                    <span>Current Namespace</span>
+                </div>
+                <select id="namespace-select" onchange="changeNamespace(this.value)"
+                    class="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-k8s-blue">
+                    <option value="">All namespaces</option>
+                </select>
+                <div id="namespace-indicator" class="mt-2 text-xs text-slate-400">
+                    <span id="ns-count">0</span> namespaces available
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 py-2 overflow-y-auto">
+                <!-- Overview -->
+                <div class="px-3 py-2">
+                    <button onclick="navigate('overview')" data-nav="overview"
+                        class="sidebar-section w-full text-left px-3 py-2 rounded text-sm font-medium flex items-center gap-2 transition-colors">
+                        <i class="fas fa-chart-pie w-4 text-center"></i>
+                        <span>Overview</span>
+                    </button>
+                </div>
+
+                <!-- Workloads -->
+                <div class="px-3 py-2">
+                    <div class="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">
+                        <span>Workloads</span>
+                        <span id="workloads-badge" class="menu-badge">0</span>
+                    </div>
+                    <ul class="space-y-0.5">
+                        <li><button onclick="navigate('cronjobs')" data-nav="cronjobs"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-clock w-4 text-center text-slate-400"></i>
+                                <span>Cron Jobs</span>
+                            </button></li>
+                        <li><button onclick="navigate('daemonsets')" data-nav="daemonsets"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-server w-4 text-center text-slate-400"></i>
+                                <span>Daemon Sets</span>
+                            </button></li>
+                        <li><button onclick="navigate('deployments')" data-nav="deployments"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-rocket w-4 text-center text-slate-400"></i>
+                                <span>Deployments</span>
+                            </button></li>
+                        <li><button onclick="navigate('jobs')" data-nav="jobs"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-tasks w-4 text-center text-slate-400"></i>
+                                <span>Jobs</span>
+                            </button></li>
+                        <li><button onclick="navigate('pods')" data-nav="pods"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-cube w-4 text-center text-slate-400"></i>
+                                <span>Pods</span>
+                            </button></li>
+                        <li><button onclick="navigate('replicasets')" data-nav="replicasets"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-clone w-4 text-center text-slate-400"></i>
+                                <span>Replica Sets</span>
+                            </button></li>
+                        <li><button onclick="navigate('replicationcontrollers')" data-nav="replicationcontrollers"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-copy w-4 text-center text-slate-400"></i>
+                                <span>Replication Controllers</span>
+                            </button></li>
+                        <li><button onclick="navigate('statefulsets')" data-nav="statefulsets"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-database w-4 text-center text-slate-400"></i>
+                                <span>Stateful Sets</span>
+                            </button></li>
+                    </ul>
+                </div>
+
+                <!-- Service -->
+                <div class="px-3 py-2">
+                    <div class="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">
+                        <span>Service</span>
+                    </div>
+                    <ul class="space-y-0.5">
+                        <li><button onclick="navigate('ingresses')" data-nav="ingresses"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-globe w-4 text-center text-slate-400"></i>
+                                <span>Ingresses</span>
+                            </button></li>
+                        <li><button onclick="navigate('ingressclasses')" data-nav="ingressclasses"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-sitemap w-4 text-center text-slate-400"></i>
+                                <span>Ingress Classes</span>
+                            </button></li>
+                        <li><button onclick="navigate('networkpolicies')" data-nav="networkpolicies"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-shield-alt w-4 text-center text-slate-400"></i>
+                                <span>Network Policies</span>
+                            </button></li>
+                        <li><button onclick="navigate('services')" data-nav="services"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-network-wired w-4 text-center text-slate-400"></i>
+                                <span>Services</span>
+                            </button></li>
+                    </ul>
+                </div>
+
+                <!-- Config and Storage -->
+                <div class="px-3 py-2">
+                    <div class="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">
+                        <span>Config and Storage</span>
+                    </div>
+                    <ul class="space-y-0.5">
+                        <li><button onclick="navigate('configmaps')" data-nav="configmaps"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-file-alt w-4 text-center text-slate-400"></i>
+                                <span>Config Maps</span>
+                            </button></li>
+                        <li><button onclick="navigate('horizontalpodautoscalers')" data-nav="horizontalpodautoscalers"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-balance-scale w-4 text-center text-slate-400"></i>
+                                <span>HPAs</span>
+                            </button></li>
+                        <li><button onclick="navigate('persistentvolumeclaims')" data-nav="persistentvolumeclaims"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-hdd w-4 text-center text-slate-400"></i>
+                                <span>Persistent Volume Claims</span>
+                            </button></li>
+                        <li><button onclick="navigate('secrets')" data-nav="secrets"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-key w-4 text-center text-slate-400"></i>
+                                <span>Secrets</span>
+                            </button></li>
+                        <li><button onclick="navigate('serviceaccounts')" data-nav="serviceaccounts"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-user-cog w-4 text-center text-slate-400"></i>
+                                <span>Service Accounts</span>
+                            </button></li>
+                        <li><button onclick="navigate('storageclasses')" data-nav="storageclasses"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-layer-group w-4 text-center text-slate-400"></i>
+                                <span>Storage Classes</span>
+                            </button></li>
+                    </ul>
+                </div>
+
+                <!-- Cluster -->
+                <div class="px-3 py-2">
+                    <div class="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">
+                        <span>Cluster</span>
+                    </div>
+                    <ul class="space-y-0.5">
+                        <li><button onclick="navigate('clusterrolebindings')" data-nav="clusterrolebindings"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-link w-4 text-center text-slate-400"></i>
+                                <span>Cluster Role Bindings</span>
+                            </button></li>
+                        <li><button onclick="navigate('clusterroles')" data-nav="clusterroles"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-user-shield w-4 text-center text-slate-400"></i>
+                                <span>Cluster Roles</span>
+                            </button></li>
+                        <li><button onclick="navigate('events')" data-nav="events"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-bell w-4 text-center text-slate-400"></i>
+                                <span>Events</span>
+                            </button></li>
+                        <li><button onclick="navigate('namespaces')" data-nav="namespaces"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-folder w-4 text-center text-slate-400"></i>
+                                <span>Namespaces</span>
+                            </button></li>
+                        <li><button onclick="navigate('nodes')" data-nav="nodes"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-server w-4 text-center text-slate-400"></i>
+                                <span>Nodes</span>
+                            </button></li>
+                        <li><button onclick="navigate('persistentvolumes')" data-nav="persistentvolumes"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-database w-4 text-center text-slate-400"></i>
+                                <span>Persistent Volumes</span>
+                            </button></li>
+                        <li><button onclick="navigate('rolebindings')" data-nav="rolebindings"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-user-tag w-4 text-center text-slate-400"></i>
+                                <span>Role Bindings</span>
+                            </button></li>
+                        <li><button onclick="navigate('roles')" data-nav="roles"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-user-lock w-4 text-center text-slate-400"></i>
+                                <span>Roles</span>
+                            </button></li>
+                    </ul>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col overflow-hidden">
+            <!-- Header -->
+            <header class="bg-k8s-blue text-white px-4 py-2 flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <button onclick="toggleSidebar()" class="p-2 hover:bg-k8s-darkblue rounded">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <nav id="breadcrumb" class="breadcrumb text-sm flex items-center">
+                        <span id="breadcrumb-content">Overview</span>
+                    </nav>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <input type="text" placeholder="Search"
+                            class="bg-k8s-darkblue border-none rounded px-4 py-1.5 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-white/30 w-64">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    </div>
+                    <button onclick="toggleTheme()" id="theme-toggle" class="p-2 hover:bg-k8s-darkblue rounded" title="Toggle Theme">
+                        <i id="theme-icon" class="fas fa-sun"></i>
+                    </button>
+                    <button onclick="refreshData()" class="p-2 hover:bg-k8s-darkblue rounded" title="Refresh">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div id="content" class="flex-1 overflow-y-auto p-6 bg-slate-900">
+                <!-- Dynamic content will be loaded here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Detail Modal -->
+    <div id="detail-modal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center">
+        <div class="bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div class="flex items-center justify-between p-4 border-b border-slate-700">
+                <h2 id="modal-title" class="text-lg font-semibold">Details</h2>
+                <button onclick="closeModal()" class="p-2 hover:bg-slate-700 rounded">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="modal-content" class="p-4 overflow-y-auto max-h-[calc(90vh-80px)]">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+        let currentNamespace = '';
+        let currentView = 'overview';
+        let eventSource = null;
+        let refreshInterval = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadNamespaces();
+            navigate('overview');
+            // Auto-refresh disabled - use manual refresh button instead
+        });
+
+        // Resource category mapping for breadcrumb
+        const resourceCategories = {
+            'overview': { category: null, name: 'Overview' },
+            'pods': { category: 'Workloads', name: 'Pods' },
+            'deployments': { category: 'Workloads', name: 'Deployments' },
+            'daemonsets': { category: 'Workloads', name: 'Daemon Sets' },
+            'statefulsets': { category: 'Workloads', name: 'Stateful Sets' },
+            'replicasets': { category: 'Workloads', name: 'Replica Sets' },
+            'replicationcontrollers': { category: 'Workloads', name: 'Replication Controllers' },
+            'jobs': { category: 'Workloads', name: 'Jobs' },
+            'cronjobs': { category: 'Workloads', name: 'Cron Jobs' },
+            'services': { category: 'Service', name: 'Services' },
+            'ingresses': { category: 'Service', name: 'Ingresses' },
+            'ingressclasses': { category: 'Service', name: 'Ingress Classes' },
+            'networkpolicies': { category: 'Service', name: 'Network Policies' },
+            'configmaps': { category: 'Config', name: 'Config Maps' },
+            'secrets': { category: 'Config', name: 'Secrets' },
+            'serviceaccounts': { category: 'Config', name: 'Service Accounts' },
+            'horizontalpodautoscalers': { category: 'Config', name: 'HPAs' },
+            'persistentvolumeclaims': { category: 'Storage', name: 'PVCs' },
+            'persistentvolumes': { category: 'Storage', name: 'Persistent Volumes' },
+            'storageclasses': { category: 'Storage', name: 'Storage Classes' },
+            'nodes': { category: 'Cluster', name: 'Nodes' },
+            'namespaces': { category: 'Cluster', name: 'Namespaces' },
+            'clusterroles': { category: 'Cluster', name: 'Cluster Roles' },
+            'clusterrolebindings': { category: 'Cluster', name: 'Cluster Role Bindings' },
+            'roles': { category: 'Cluster', name: 'Roles' },
+            'rolebindings': { category: 'Cluster', name: 'Role Bindings' },
+            'events': { category: 'Cluster', name: 'Events' }
+        };
+
+        // Update breadcrumb based on current view
+        function updateBreadcrumb(view, detailName = null) {
+            const breadcrumb = document.getElementById('breadcrumb-content');
+            const info = resourceCategories[view] || { category: null, name: formatViewName(view) };
+
+            let html = '';
+            if (info.category) {
+                html = `<span class="breadcrumb-category">${info.category}</span>`;
+                html += `<span class="breadcrumb-separator">›</span>`;
+                if (detailName) {
+                    html += `<a href="#" onclick="navigate('${view}')">${info.name}</a>`;
+                    html += `<span class="breadcrumb-separator">›</span>`;
+                    html += `<span class="breadcrumb-current">${detailName}</span>`;
+                } else {
+                    html += `<span class="breadcrumb-current">${info.name}</span>`;
+                }
+            } else {
+                html = `<span class="breadcrumb-current">${info.name}</span>`;
+            }
+
+            breadcrumb.innerHTML = html;
+        }
+
+        // Navigation
+        function navigate(view, detail = null) {
+            currentView = view;
+            updateActiveNav(view);
+            updateBreadcrumb(view);
+
+            switch (view) {
+                case 'overview': renderOverview(); break;
+                case 'nodes': renderNodes(); break;
+                case 'namespaces': renderNamespacesList(); break;
+                case 'pods': renderPods(); break;
+                case 'deployments': renderDeployments(); break;
+                case 'daemonsets': renderDaemonSets(); break;
+                case 'statefulsets': renderStatefulSets(); break;
+                case 'replicasets': renderReplicaSets(); break;
+                case 'replicationcontrollers': renderReplicationControllers(); break;
+                case 'jobs': renderJobs(); break;
+                case 'cronjobs': renderCronJobs(); break;
+                case 'services': renderServices(); break;
+                case 'ingresses': renderIngresses(); break;
+                case 'ingressclasses': renderIngressClasses(); break;
+                case 'networkpolicies': renderNetworkPolicies(); break;
+                case 'configmaps': renderConfigMaps(); break;
+                case 'secrets': renderSecrets(); break;
+                case 'serviceaccounts': renderServiceAccounts(); break;
+                case 'horizontalpodautoscalers': renderHPAs(); break;
+                case 'persistentvolumeclaims': renderPVCs(); break;
+                case 'persistentvolumes': renderPVs(); break;
+                case 'storageclasses': renderStorageClasses(); break;
+                case 'clusterroles': renderClusterRoles(); break;
+                case 'clusterrolebindings': renderClusterRoleBindings(); break;
+                case 'roles': renderRoles(); break;
+                case 'rolebindings': renderRoleBindings(); break;
+                case 'events': renderEvents(); break;
+                case 'logs': renderLogs(detail); break;
+                default: renderOverview();
+            }
+        }
+
+        function updateActiveNav(view) {
+            document.querySelectorAll('[data-nav]').forEach(el => {
+                el.classList.remove('active', 'bg-slate-700', 'text-white');
+                if (el.dataset.nav === view) {
+                    el.classList.add('active', 'bg-slate-700', 'text-white');
+                }
+            });
+        }
+
+        function formatViewName(view) {
+            const names = {
+                'overview': 'Overview',
+                'nodes': 'Nodes',
+                'namespaces': 'Namespaces',
+                'pods': 'Pods',
+                'deployments': 'Deployments',
+                'daemonsets': 'Daemon Sets',
+                'statefulsets': 'Stateful Sets',
+                'replicasets': 'Replica Sets',
+                'replicationcontrollers': 'Replication Controllers',
+                'jobs': 'Jobs',
+                'cronjobs': 'Cron Jobs',
+                'services': 'Services',
+                'ingresses': 'Ingresses',
+                'ingressclasses': 'Ingress Classes',
+                'configmaps': 'Config Maps',
+                'secrets': 'Secrets',
+                'persistentvolumeclaims': 'Persistent Volume Claims',
+                'persistentvolumes': 'Persistent Volumes',
+                'storageclasses': 'Storage Classes',
+                'clusterroles': 'Cluster Roles',
+                'clusterrolebindings': 'Cluster Role Bindings',
+                'logs': 'Logs'
+            };
+            return names[view] || view;
+        }
+
+        function refreshCurrentView() {
+            navigate(currentView);
+        }
+
+        function refreshData() {
+            navigate(currentView);
+        }
+
+        // Namespace handling
+        async function loadNamespaces(retryCount = 0) {
+            try {
+                const res = await fetch(`${API_BASE}/api/namespaces`);
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+                const data = await res.json();
+                const sidebarSelect = document.getElementById('namespace-select');
+
+                sidebarSelect.innerHTML = '<option value="">All namespaces</option>';
+
+                // Sort namespaces alphabetically and add to dropdown
+                const namespaces = data.items || [];
+                namespaces.sort((a, b) => a.name.localeCompare(b.name));
+                namespaces.forEach(ns => {
+                    sidebarSelect.innerHTML += `<option value="${ns.name}">${ns.name}</option>`;
+                });
+
+                // Update namespace count
+                document.getElementById('ns-count').textContent = namespaces.length;
+
+                // Restore current selection if any
+                if (currentNamespace) {
+                    sidebarSelect.value = currentNamespace;
+                }
+            } catch (err) {
+                console.error('Failed to load namespaces:', err);
+                // Retry up to 3 times with increasing delay (cache might not be ready)
+                if (retryCount < 3) {
+                    setTimeout(() => loadNamespaces(retryCount + 1), 1000 * (retryCount + 1));
+                }
+            }
+        }
+
+        function changeNamespace(ns, skipRefresh = false) {
+            currentNamespace = ns;
+            document.getElementById('namespace-select').value = ns;
+            if (!skipRefresh) {
+                refreshCurrentView();
+            }
+        }
+
+        function getNamespaceParam() {
+            return currentNamespace ? `?namespace=${currentNamespace}` : '';
+        }
+
+        // Overview
+        async function renderOverview() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+
+            try {
+                const [overview, nodeMetrics] = await Promise.all([
+                    fetch(`${API_BASE}/api/overview`).then(r => r.json()),
+                    fetch(`${API_BASE}/api/metrics/nodes`).then(r => r.json()).catch(() => ({ items: [] }))
+                ]);
+
+                const cpuUsage = nodeMetrics.items?.reduce((a, n) => a + (n.cpuPercent || 0), 0) / (nodeMetrics.items?.length || 1);
+                const memUsage = nodeMetrics.items?.reduce((a, n) => a + (n.memPercent || 0), 0) / (nodeMetrics.items?.length || 1);
+                const podAlloc = (overview.runningPods / Math.max(overview.totalPods, 1)) * 100;
+
+                content.innerHTML = `
+                    <div class="mb-6">
+                        <h1 class="text-2xl font-bold mb-2">Cluster Overview</h1>
+                        <p class="text-slate-400">Real-time cluster status and resource utilization</p>
+                    </div>
+
+                    <!-- Resource Charts -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+                        ${renderCircularChart('CPU', cpuUsage, 'Requests', 'green')}
+                        ${renderCircularChart('CPU', cpuUsage * 0.14, 'Limits', 'green')}
+                        ${renderCircularChart('Memory', memUsage, 'Requests', 'yellow')}
+                        ${renderCircularChart('Memory', memUsage * 0.3, 'Limits', 'yellow')}
+                        ${renderCircularChart('Pods', podAlloc, 'Allocation', 'blue')}
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+                        <div class="bg-slate-800 rounded-lg p-4 border border-slate-700 cursor-pointer hover:border-k8s-blue" onclick="navigate('nodes')">
+                            <div class="text-3xl font-bold text-green-500">${overview.readyNodes}/${overview.totalNodes}</div>
+                            <div class="text-sm text-slate-400">Nodes</div>
+                        </div>
+                        <div class="bg-slate-800 rounded-lg p-4 border border-slate-700 cursor-pointer hover:border-k8s-blue" onclick="navigate('pods')">
+                            <div class="text-3xl font-bold text-green-500">${overview.runningPods}</div>
+                            <div class="text-sm text-slate-400">Running Pods</div>
+                        </div>
+                        <div class="bg-slate-800 rounded-lg p-4 border border-slate-700 cursor-pointer hover:border-k8s-blue" onclick="navigate('pods')">
+                            <div class="text-3xl font-bold text-yellow-500">${overview.pendingPods}</div>
+                            <div class="text-sm text-slate-400">Pending Pods</div>
+                        </div>
+                        <div class="bg-slate-800 rounded-lg p-4 border border-slate-700 cursor-pointer hover:border-k8s-blue" onclick="navigate('pods')">
+                            <div class="text-3xl font-bold text-red-500">${overview.failedPods}</div>
+                            <div class="text-sm text-slate-400">Failed Pods</div>
+                        </div>
+                        <div class="bg-slate-800 rounded-lg p-4 border border-slate-700 cursor-pointer hover:border-k8s-blue" onclick="navigate('deployments')">
+                            <div class="text-3xl font-bold">${overview.totalDeployments}</div>
+                            <div class="text-sm text-slate-400">Deployments</div>
+                        </div>
+                        <div class="bg-slate-800 rounded-lg p-4 border border-slate-700 cursor-pointer hover:border-k8s-blue" onclick="navigate('services')">
+                            <div class="text-3xl font-bold">${overview.totalServices}</div>
+                            <div class="text-sm text-slate-400">Services</div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-slate-800 rounded-lg border border-slate-700">
+                            <div class="p-4 border-b border-slate-700 flex items-center justify-between">
+                                <h3 class="font-semibold">Namespaces</h3>
+                                <span class="text-sm text-slate-400">${overview.namespaces.length} total</span>
+                            </div>
+                            <div class="p-4 max-h-64 overflow-y-auto">
+                                <div class="flex flex-wrap gap-2">
+                                    ${overview.namespaces.map(ns => `
+                                        <button onclick="changeNamespace('${ns}', true); navigate('pods');"
+                                            class="px-3 py-1 bg-slate-700 hover:bg-k8s-blue rounded text-sm">${ns}</button>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-slate-800 rounded-lg border border-slate-700">
+                            <div class="p-4 border-b border-slate-700">
+                                <h3 class="font-semibold">Quick Navigation</h3>
+                            </div>
+                            <div class="p-4 grid grid-cols-2 gap-2">
+                                <button onclick="navigate('pods')" class="p-3 bg-slate-700 hover:bg-k8s-blue rounded text-left">
+                                    <i class="fas fa-cube mr-2"></i> Pods
+                                </button>
+                                <button onclick="navigate('deployments')" class="p-3 bg-slate-700 hover:bg-k8s-blue rounded text-left">
+                                    <i class="fas fa-layer-group mr-2"></i> Deployments
+                                </button>
+                                <button onclick="navigate('services')" class="p-3 bg-slate-700 hover:bg-k8s-blue rounded text-left">
+                                    <i class="fas fa-network-wired mr-2"></i> Services
+                                </button>
+                                <button onclick="navigate('nodes')" class="p-3 bg-slate-700 hover:bg-k8s-blue rounded text-left">
+                                    <i class="fas fa-server mr-2"></i> Nodes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState('overview', err.message);
+            }
+        }
+
+        function renderCircularChart(label, percent, sublabel, color) {
+            const val = Math.min(100, Math.max(0, percent || 0)).toFixed(1);
+            return `
+                <div class="bg-slate-800 rounded-lg p-4 border border-slate-700 text-center">
+                    <div class="text-sm font-medium mb-2">${label}</div>
+                    <svg viewBox="0 0 36 36" class="circular-chart w-20 h-20 mx-auto">
+                        <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                        <path class="circle circle-${color}" stroke-dasharray="${val}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                        <text x="18" y="20.35" class="percentage">${val}%</text>
+                    </svg>
+                    <div class="text-xs text-slate-400">${sublabel}</div>
+                </div>
+            `;
+        }
+
+        // Generic table renderer
+        function renderTable(columns, data, actions = null) {
+            if (!data || data.length === 0) {
+                return `
+                    <div class="empty-state">
+                        <div class="empty-state-icon"><i class="fas fa-inbox"></i></div>
+                        <div class="empty-state-title">No Resources Found</div>
+                        <div class="empty-state-message">There are no resources to display in this view.</div>
+                    </div>
+                `;
+            }
+            return `
+                <div class="table-container">
+                    <table class="w-full">
+                        <thead class="table-header">
+                            <tr>
+                                ${columns.map(col => `<th class="text-left">${col.label}</th>`).join('')}
+                                ${actions ? '<th class="text-left">Actions</th>' : ''}
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-700">
+                            ${data.map(row => `
+                                <tr class="hover:bg-slate-700/50">
+                                    ${columns.map(col => `<td class="px-4 py-3 text-sm ${col.class || ''}">${col.render ? col.render(row) : row[col.key] || '-'}</td>`).join('')}
+                                    ${actions ? `<td class="px-4 py-3 text-sm">${actions(row)}</td>` : ''}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // Error state renderer
+        function renderErrorState(resource, message) {
+            return `
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fas fa-exclamation-triangle" style="color: #f59e0b;"></i></div>
+                    <div class="empty-state-title">Unable to Load ${formatViewName(resource)}</div>
+                    <div class="empty-state-message">
+                        ${message.includes('Failed to fetch') || message.includes('NetworkError')
+                            ? 'Could not connect to the server. Please check your connection and try again.'
+                            : 'An error occurred while loading data. Please try refreshing the page.'}
+                    </div>
+                    <button onclick="refreshCurrentView()" class="mt-4 px-4 py-2 bg-k8s-blue hover:bg-k8s-darkblue rounded text-white text-sm">
+                        <i class="fas fa-redo mr-2"></i>Try Again
+                    </button>
+                </div>
+            `;
+        }
+
+        // Safely get items from API response
+        function getItems(data) {
+            if (!data) return [];
+            if (Array.isArray(data.items)) return data.items;
+            if (Array.isArray(data)) return data;
+            return [];
+        }
+
+        function statusClass(status) {
+            const s = (status || '').toLowerCase();
+            if (['running', 'ready', 'bound', 'active', 'available'].some(x => s.includes(x))) return 'status-running';
+            if (['pending', 'waiting', 'creating'].some(x => s.includes(x))) return 'status-pending';
+            if (['failed', 'error', 'crashloop', 'notready'].some(x => s.includes(x))) return 'status-failed';
+            if (['succeeded', 'completed'].some(x => s.includes(x))) return 'status-succeeded';
+            if (['terminating'].some(x => s.includes(x))) return 'status-terminating';
+            return '';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Nodes
+        async function renderNodes() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+
+            try {
+                const data = await fetch(`${API_BASE}/api/nodes`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Nodes</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showNodeDetail('${r.name}')">${r.name}</span>` },
+                    { label: 'Status', key: 'status', render: r => `<span class="${statusClass(r.status)}">${r.status}</span>` },
+                    { label: 'Roles', key: 'roles', render: r => r.roles?.join(', ') || '-' },
+                    { label: 'Version', key: 'version' },
+                    { label: 'Internal IP', key: 'internalIP' },
+                    { label: 'CPU', key: 'cpu' },
+                    { label: 'Memory', key: 'memory' },
+                    { label: 'Age', key: 'age' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        async function showNodeDetail(name) {
+            try {
+                const data = await fetch(`${API_BASE}/api/nodes/${name}`).then(r => r.json());
+                document.getElementById('modal-title').textContent = `Node: ${name}`;
+                document.getElementById('modal-content').innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <h3 class="font-semibold mb-2">Conditions</h3>
+                            <table class="w-full text-sm">
+                                <thead class="bg-slate-700">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left">Type</th>
+                                        <th class="px-3 py-2 text-left">Status</th>
+                                        <th class="px-3 py-2 text-left">Reason</th>
+                                        <th class="px-3 py-2 text-left">Message</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-700">
+                                    ${data.conditions?.map(c => `
+                                        <tr>
+                                            <td class="px-3 py-2">${c.type}</td>
+                                            <td class="px-3 py-2 ${c.status === 'True' ? 'text-green-500' : 'text-slate-400'}">${c.status}</td>
+                                            <td class="px-3 py-2">${c.reason || '-'}</td>
+                                            <td class="px-3 py-2 text-xs">${c.message || '-'}</td>
+                                        </tr>
+                                    `).join('') || ''}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold mb-2">Pods on this node (${data.pods?.length || 0})</h3>
+                            <div class="max-h-48 overflow-y-auto">
+                                ${data.pods?.map(p => `<div class="px-3 py-1 text-sm">${p.namespace}/${p.name} - <span class="${statusClass(p.status)}">${p.status}</span></div>`).join('') || 'No pods'}
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold mb-2">Labels</h3>
+                            <div class="flex flex-wrap gap-1">
+                                ${Object.entries(data.labels || {}).map(([k, v]) => `<span class="px-2 py-1 bg-slate-700 rounded text-xs">${k}=${v}</span>`).join('') || 'None'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('detail-modal').classList.remove('hidden');
+            } catch (err) {
+                alert('Error loading node details: ' + err.message);
+            }
+        }
+
+        // Pods
+        async function renderPods() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+
+            try {
+                const data = await fetch(`${API_BASE}/api/pods${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Pods</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showPodDetail('${r.namespace}', '${r.name}')">${r.name}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
+                    { label: 'Status', key: 'status', render: r => `<span class="${statusClass(r.status)}">${r.status}</span>` },
+                    { label: 'Ready', key: 'ready' },
+                    { label: 'Restarts', key: 'restarts' },
+                    { label: 'Node', key: 'node' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data), r => `
+                            <button onclick="viewLogs('${r.namespace}', '${r.name}')" class="text-blue-400 hover:text-blue-300 mr-2" title="View Logs">
+                                <i class="fas fa-file-alt"></i>
+                            </button>
+                            <button onclick="deletePod('${r.namespace}', '${r.name}')" class="text-red-400 hover:text-red-300" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        `)}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        async function showPodDetail(namespace, name) {
+            try {
+                const data = await fetch(`${API_BASE}/api/pods/${namespace}/${name}`).then(r => r.json());
+                document.getElementById('modal-title').textContent = `Pod: ${namespace}/${name}`;
+                document.getElementById('modal-content').innerHTML = `
+                    <div class="space-y-4">
+                        <!-- Basic Info -->
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Basic Information</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                                <div><span class="text-slate-400">Status:</span> <span class="${statusClass(data.status)}">${data.status}</span></div>
+                                <div><span class="text-slate-400">Node:</span> ${data.node || '-'}</div>
+                                <div><span class="text-slate-400">Pod IP:</span> <span class="text-k8s-blue">${data.podIP || '-'}</span></div>
+                                <div><span class="text-slate-400">Host IP:</span> ${data.hostIP || '-'}</div>
+                                <div><span class="text-slate-400">QoS Class:</span> ${data.qosClass || '-'}</div>
+                                <div><span class="text-slate-400">Restart Policy:</span> ${data.restartPolicy || '-'}</div>
+                                <div><span class="text-slate-400">Service Account:</span> ${data.serviceAccount || '-'}</div>
+                                <div><span class="text-slate-400">Created:</span> ${data.createdAt || '-'}</div>
+                                <div><span class="text-slate-400">Age:</span> ${data.age || '-'}</div>
+                            </div>
+                        </div>
+
+                        <!-- Owner References -->
+                        ${data.ownerReferences?.length > 0 ? `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Controlled By</h3>
+                            <div class="space-y-1">
+                                ${data.ownerReferences.map(ref => `
+                                    <div class="text-sm"><span class="text-yellow-400">${ref.kind}</span>/<span class="text-white">${ref.name}</span></div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <!-- Conditions -->
+                        ${data.conditions?.length > 0 ? `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Conditions</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-xs">
+                                    <thead><tr class="text-slate-400"><th class="text-left p-1">Type</th><th class="text-left p-1">Status</th><th class="text-left p-1">Reason</th></tr></thead>
+                                    <tbody>
+                                        ${data.conditions.map(c => `
+                                            <tr><td class="p-1">${c.type}</td><td class="p-1 ${c.status === 'True' ? 'text-green-400' : 'text-red-400'}">${c.status}</td><td class="p-1 text-slate-400">${c.reason || '-'}</td></tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <!-- Containers -->
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Containers (${data.containers?.length || 0})</h3>
+                            <div class="space-y-3">
+                                ${data.containers?.map(c => `
+                                    <div class="bg-slate-600 rounded p-3">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="font-medium text-white">${c.name}</span>
+                                            <span class="text-xs px-2 py-1 rounded ${c.ready ? 'bg-green-600' : 'bg-red-600'}">${c.state || 'Unknown'}</span>
+                                        </div>
+                                        <div class="text-xs space-y-1">
+                                            <div><span class="text-slate-400">Image:</span> <span class="text-k8s-blue">${c.image}</span></div>
+                                            <div><span class="text-slate-400">Pull Policy:</span> ${c.imagePullPolicy || '-'}</div>
+                                            <div><span class="text-slate-400">Ready:</span> ${c.ready ? 'Yes' : 'No'} | <span class="text-slate-400">Restarts:</span> ${c.restartCount || 0}</div>
+                                            ${c.ports?.length > 0 ? `<div><span class="text-slate-400">Ports:</span> ${c.ports.map(p => p.containerPort + '/' + p.protocol).join(', ')}</div>` : ''}
+                                            ${c.resources?.requests && Object.keys(c.resources.requests).length > 0 ? `<div><span class="text-slate-400">Requests:</span> ${Object.entries(c.resources.requests).map(([k,v]) => k + ':' + v).join(', ')}</div>` : ''}
+                                            ${c.resources?.limits && Object.keys(c.resources.limits).length > 0 ? `<div><span class="text-slate-400">Limits:</span> ${Object.entries(c.resources.limits).map(([k,v]) => k + ':' + v).join(', ')}</div>` : ''}
+                                        </div>
+                                    </div>
+                                `).join('') || '<div class="text-slate-400">No containers</div>'}
+                            </div>
+                        </div>
+
+                        <!-- Init Containers -->
+                        ${data.initContainers?.length > 0 ? `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Init Containers (${data.initContainers.length})</h3>
+                            <div class="space-y-2">
+                                ${data.initContainers.map(c => `
+                                    <div class="bg-slate-600 rounded p-2 text-xs">
+                                        <span class="font-medium">${c.name}</span> - <span class="text-slate-400">${c.image}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <!-- Volumes -->
+                        ${data.volumes?.length > 0 ? `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Volumes (${data.volumes.length})</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                ${data.volumes.map(v => `
+                                    <div class="bg-slate-600 rounded p-2 text-xs">
+                                        <span class="font-medium text-white">${v.name}</span>
+                                        <span class="text-yellow-400 ml-2">${v.type}</span>
+                                        ${v.source !== '-' ? `<span class="text-slate-400 ml-1">(${v.source})</span>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <!-- Labels -->
+                        ${data.labels && Object.keys(data.labels).length > 0 ? `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Labels</h3>
+                            <div class="flex flex-wrap gap-2">
+                                ${Object.entries(data.labels).map(([k, v]) => `<span class="px-2 py-1 bg-slate-600 rounded text-xs">${k}: ${v}</span>`).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+                document.getElementById('detail-modal').classList.remove('hidden');
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function deletePod(namespace, name) {
+            if (!confirm(`Delete pod "${name}" in namespace "${namespace}"?`)) return;
+            try {
+                await fetch(`${API_BASE}/api/pods/${namespace}/${name}`, { method: 'DELETE' });
+                refreshCurrentView();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        // Deployment actions
+        async function scaleDeployment(namespace, name) {
+            const replicas = prompt(`Scale deployment "${name}" to how many replicas?`, '1');
+            if (replicas === null) return;
+            const num = parseInt(replicas);
+            if (isNaN(num) || num < 0) {
+                alert('Please enter a valid number >= 0');
+                return;
+            }
+            try {
+                await fetch(`${API_BASE}/api/deployments/${namespace}/${name}/scale`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ replicas: num })
+                });
+                refreshCurrentView();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function restartDeployment(namespace, name) {
+            if (!confirm(`Restart deployment "${name}" in namespace "${namespace}"?`)) return;
+            try {
+                await fetch(`${API_BASE}/api/deployments/${namespace}/${name}/restart`, { method: 'POST' });
+                refreshCurrentView();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function deleteDeployment(namespace, name) {
+            if (!confirm(`Delete deployment "${name}" in namespace "${namespace}"? This will also delete all pods managed by this deployment.`)) return;
+            try {
+                await fetch(`${API_BASE}/api/deployments/${namespace}/${name}`, { method: 'DELETE' });
+                refreshCurrentView();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        // StatefulSet actions
+        async function scaleStatefulSet(namespace, name) {
+            const replicas = prompt(`Scale statefulset "${name}" to how many replicas?`, '1');
+            if (replicas === null) return;
+            const num = parseInt(replicas);
+            if (isNaN(num) || num < 0) {
+                alert('Please enter a valid number >= 0');
+                return;
+            }
+            try {
+                await fetch(`${API_BASE}/api/statefulsets/${namespace}/${name}/scale`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ replicas: num })
+                });
+                refreshCurrentView();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function deleteStatefulSet(namespace, name) {
+            if (!confirm(`Delete statefulset "${name}" in namespace "${namespace}"? This will also delete all pods managed by this statefulset.`)) return;
+            try {
+                await fetch(`${API_BASE}/api/statefulsets/${namespace}/${name}`, { method: 'DELETE' });
+                refreshCurrentView();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        function viewLogs(namespace, pod) {
+            navigate('logs', { namespace, pod });
+        }
+
+        // Logs
+        function renderLogs(detail) {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="mb-4">
+                    <h1 class="text-xl font-bold mb-4">Pod Logs</h1>
+                    <div class="flex items-center space-x-4 mb-4">
+                        <input type="text" id="log-namespace" placeholder="Namespace" value="${detail?.namespace || ''}"
+                            class="bg-slate-700 border border-slate-600 rounded px-3 py-2 w-48">
+                        <input type="text" id="log-pod" placeholder="Pod name" value="${detail?.pod || ''}"
+                            class="bg-slate-700 border border-slate-600 rounded px-3 py-2 w-64">
+                        <button onclick="startLogStream()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded">
+                            <i class="fas fa-play mr-2"></i>Stream
+                        </button>
+                        <button onclick="stopLogStream()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded">
+                            <i class="fas fa-stop mr-2"></i>Stop
+                        </button>
+                        <button onclick="clearLogs()" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded">
+                            <i class="fas fa-eraser mr-2"></i>Clear
+                        </button>
+                    </div>
+                </div>
+                <div id="log-output" class="bg-slate-950 rounded-lg border border-slate-700 p-4 h-[calc(100vh-280px)] overflow-auto log-container">
+                    <p class="text-slate-500">Enter namespace and pod name, then click Stream</p>
+                </div>
+            `;
+            if (detail?.namespace && detail?.pod) {
+                setTimeout(startLogStream, 100);
+            }
+        }
+
+        function startLogStream() {
+            stopLogStream();
+            const namespace = document.getElementById('log-namespace').value;
+            const pod = document.getElementById('log-pod').value;
+            if (!namespace || !pod) {
+                alert('Please enter namespace and pod name');
+                return;
+            }
+            const logOutput = document.getElementById('log-output');
+            logOutput.innerHTML = '<p class="text-slate-500">Connecting...</p>';
+
+            eventSource = new EventSource(`${API_BASE}/api/logs/${namespace}/${pod}`);
+            eventSource.addEventListener('log', (e) => {
+                if (logOutput.querySelector('.text-slate-500')) logOutput.innerHTML = '';
+                const line = document.createElement('div');
+                line.textContent = e.data;
+                line.className = 'text-green-400 whitespace-pre';
+                logOutput.appendChild(line);
+                logOutput.scrollTop = logOutput.scrollHeight;
+            });
+            eventSource.addEventListener('error', (e) => {
+                const line = document.createElement('div');
+                line.textContent = e.data || 'Stream error';
+                line.className = 'text-red-400';
+                logOutput.appendChild(line);
+            });
+            eventSource.onerror = () => {
+                const line = document.createElement('div');
+                line.textContent = '[Stream disconnected]';
+                line.className = 'text-yellow-400';
+                logOutput.appendChild(line);
+            };
+        }
+
+        function stopLogStream() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('log-output').innerHTML = '<p class="text-slate-500">Logs cleared</p>';
+        }
+
+        // Deployments
+        async function renderDeployments() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/deployments${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Deployments</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showDeploymentDetail('${r.namespace}', '${r.name}')">${r.name}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
+                    { label: 'Ready', key: 'ready' },
+                    { label: 'Up-to-date', key: 'upToDate' },
+                    { label: 'Available', key: 'available' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data), r => `
+                    <button onclick="scaleDeployment('${r.namespace}', '${r.name}')" class="text-blue-400 hover:text-blue-300 mr-2" title="Scale">
+                        <i class="fas fa-expand-arrows-alt"></i>
+                    </button>
+                    <button onclick="restartDeployment('${r.namespace}', '${r.name}')" class="text-yellow-400 hover:text-yellow-300 mr-2" title="Restart">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                    <button onclick="deleteDeployment('${r.namespace}', '${r.name}')" class="text-red-400 hover:text-red-300" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `)}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        async function showDeploymentDetail(namespace, name) {
+            try {
+                const data = await fetch(`${API_BASE}/api/deployments/${namespace}/${name}`).then(r => r.json());
+                document.getElementById('modal-title').textContent = `Deployment: ${namespace}/${name}`;
+
+                const spec = data.spec || {};
+                const status = data.status || {};
+                const strategy = spec.strategy || {};
+
+                document.getElementById('modal-content').innerHTML = `
+                    <div class="space-y-4">
+                        <!-- Basic Info -->
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Basic Information</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                                <div><span class="text-slate-400">Name:</span> ${data.metadata?.name || name}</div>
+                                <div><span class="text-slate-400">Namespace:</span> ${data.metadata?.namespace || namespace}</div>
+                                <div><span class="text-slate-400">Created:</span> ${data.metadata?.creationTimestamp || '-'}</div>
+                                <div><span class="text-slate-400">Replicas:</span> <span class="text-green-400">${status.readyReplicas || 0}</span>/<span class="text-white">${spec.replicas || 0}</span></div>
+                                <div><span class="text-slate-400">Updated:</span> ${status.updatedReplicas || 0}</div>
+                                <div><span class="text-slate-400">Available:</span> ${status.availableReplicas || 0}</div>
+                                <div><span class="text-slate-400">Strategy:</span> ${strategy.type || '-'}</div>
+                                ${strategy.type === 'RollingUpdate' ? `
+                                <div><span class="text-slate-400">Max Surge:</span> ${strategy.rollingUpdate?.maxSurge || '-'}</div>
+                                <div><span class="text-slate-400">Max Unavailable:</span> ${strategy.rollingUpdate?.maxUnavailable || '-'}</div>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Selector -->
+                        ${spec.selector?.matchLabels ? `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Selector</h3>
+                            <div class="flex flex-wrap gap-2">
+                                ${Object.entries(spec.selector.matchLabels).map(([k, v]) => `<span class="px-2 py-1 bg-slate-600 rounded text-xs">${k}: ${v}</span>`).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <!-- Conditions -->
+                        ${status.conditions?.length > 0 ? `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Conditions</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-xs">
+                                    <thead><tr class="text-slate-400"><th class="text-left p-1">Type</th><th class="text-left p-1">Status</th><th class="text-left p-1">Reason</th><th class="text-left p-1">Message</th></tr></thead>
+                                    <tbody>
+                                        ${status.conditions.map(c => `
+                                            <tr>
+                                                <td class="p-1">${c.type}</td>
+                                                <td class="p-1 ${c.status === 'True' ? 'text-green-400' : 'text-red-400'}">${c.status}</td>
+                                                <td class="p-1 text-yellow-400">${c.reason || '-'}</td>
+                                                <td class="p-1 text-slate-400 text-xs">${(c.message || '-').substring(0, 60)}${(c.message?.length > 60 ? '...' : '')}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <!-- Containers -->
+                        ${spec.template?.spec?.containers?.length > 0 ? `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Container Template</h3>
+                            <div class="space-y-3">
+                                ${spec.template.spec.containers.map(c => `
+                                    <div class="bg-slate-600 rounded p-3">
+                                        <div class="font-medium text-white mb-2">${c.name}</div>
+                                        <div class="text-xs space-y-1">
+                                            <div><span class="text-slate-400">Image:</span> <span class="text-k8s-blue">${c.image}</span></div>
+                                            ${c.ports?.length > 0 ? `<div><span class="text-slate-400">Ports:</span> ${c.ports.map(p => (p.name ? p.name + ':' : '') + p.containerPort + '/' + (p.protocol || 'TCP')).join(', ')}</div>` : ''}
+                                            ${c.resources?.requests ? `<div><span class="text-slate-400">Requests:</span> ${Object.entries(c.resources.requests).map(([k,v]) => k + ':' + v).join(', ')}</div>` : ''}
+                                            ${c.resources?.limits ? `<div><span class="text-slate-400">Limits:</span> ${Object.entries(c.resources.limits).map(([k,v]) => k + ':' + v).join(', ')}</div>` : ''}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <!-- Labels -->
+                        ${data.metadata?.labels && Object.keys(data.metadata.labels).length > 0 ? `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Labels</h3>
+                            <div class="flex flex-wrap gap-2">
+                                ${Object.entries(data.metadata.labels).map(([k, v]) => `<span class="px-2 py-1 bg-slate-600 rounded text-xs">${k}: ${v}</span>`).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+                document.getElementById('detail-modal').classList.remove('hidden');
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        // DaemonSets
+        async function renderDaemonSets() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/daemonsets${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Daemon Sets</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
+                    { label: 'Desired', key: 'desired' },
+                    { label: 'Current', key: 'current' },
+                    { label: 'Ready', key: 'ready' },
+                    { label: 'Up-to-date', key: 'upToDate' },
+                    { label: 'Available', key: 'available' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // StatefulSets
+        async function renderStatefulSets() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/statefulsets${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Stateful Sets</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
+                    { label: 'Ready', key: 'ready' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data), r => `
+                    <button onclick="scaleStatefulSet('${r.namespace}', '${r.name}')" class="text-blue-400 hover:text-blue-300 mr-2" title="Scale">
+                        <i class="fas fa-expand-arrows-alt"></i>
+                    </button>
+                    <button onclick="deleteStatefulSet('${r.namespace}', '${r.name}')" class="text-red-400 hover:text-red-300" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `)}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // ReplicaSets
+        async function renderReplicaSets() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/replicasets${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Replica Sets</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
+                    { label: 'Desired', key: 'desired' },
+                    { label: 'Current', key: 'current' },
+                    { label: 'Ready', key: 'ready' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // ReplicationControllers
+        async function renderReplicationControllers() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/replicationcontrollers${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Replication Controllers</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
+                    { label: 'Desired', key: 'desired' },
+                    { label: 'Current', key: 'current' },
+                    { label: 'Ready', key: 'ready' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // Jobs
+        async function renderJobs() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/jobs${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Jobs</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
+                    { label: 'Completions', key: 'completions' },
+                    { label: 'Duration', key: 'duration' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // CronJobs
+        async function renderCronJobs() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/cronjobs${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Cron Jobs</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
+                    { label: 'Schedule', key: 'schedule' },
+                    { label: 'Suspend', key: 'suspend', render: r => r.suspend ? 'Yes' : 'No' },
+                    { label: 'Active', key: 'active' },
+                    { label: 'Last Schedule', key: 'lastSchedule' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // Services
+        async function renderServices() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/services${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Services</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
+                    { label: 'Type', key: 'type' },
+                    { label: 'Cluster IP', key: 'clusterIP' },
+                    { label: 'External IP', key: 'externalIP' },
+                    { label: 'Ports', key: 'ports', render: r => r.ports?.join(', ') || '-' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // Ingresses
+        async function renderIngresses() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/ingresses${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Ingresses</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
+                    { label: 'Class', key: 'class' },
+                    { label: 'Hosts', key: 'hosts', render: r => r.hosts?.join(', ') || '-' },
+                    { label: 'Address', key: 'address' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // IngressClasses
+        async function renderIngressClasses() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/ingressclasses`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Ingress Classes</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Controller', key: 'controller' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // ConfigMaps
+        async function renderConfigMaps() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/configmaps${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Config Maps</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showConfigMapDetail('${r.namespace}', '${r.name}')">${r.name}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
+                    { label: 'Data', key: 'data' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        async function showConfigMapDetail(namespace, name) {
+            try {
+                const data = await fetch(`${API_BASE}/api/configmaps/${namespace}/${name}`).then(r => r.json());
+                document.getElementById('modal-title').textContent = `ConfigMap: ${namespace}/${name}`;
+                document.getElementById('modal-content').innerHTML = `
+                    <div class="space-y-4">
+                        <!-- Basic Info -->
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Basic Information</h3>
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div><span class="text-slate-400">Name:</span> ${data.metadata?.name || name}</div>
+                                <div><span class="text-slate-400">Namespace:</span> ${data.metadata?.namespace || namespace}</div>
+                                <div><span class="text-slate-400">Created:</span> ${data.metadata?.creationTimestamp || '-'}</div>
+                                <div><span class="text-slate-400">Data Keys:</span> ${Object.keys(data.data || {}).length}</div>
+                            </div>
+                        </div>
+
+                        <!-- Labels -->
+                        ${data.metadata?.labels && Object.keys(data.metadata.labels).length > 0 ? `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Labels</h3>
+                            <div class="flex flex-wrap gap-2">
+                                ${Object.entries(data.metadata.labels).map(([k, v]) => `<span class="px-2 py-1 bg-slate-600 rounded text-xs">${k}: ${v}</span>`).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <!-- Data -->
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Data (${Object.keys(data.data || {}).length} keys)</h3>
+                            <div class="space-y-3">
+                                ${Object.entries(data.data || {}).map(([k, v]) => `
+                                    <div class="bg-slate-600 rounded p-3">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="font-medium text-yellow-400">${k}</span>
+                                            <span class="text-xs text-slate-400">${v.length} chars</span>
+                                        </div>
+                                        <pre class="text-xs overflow-auto max-h-48 bg-slate-800 p-2 rounded whitespace-pre-wrap">${escapeHtml(v)}</pre>
+                                    </div>
+                                `).join('') || '<div class="text-slate-400">No data</div>'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('detail-modal').classList.remove('hidden');
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        // Secrets
+        async function renderSecrets() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/secrets${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Secrets</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
+                    { label: 'Type', key: 'type' },
+                    { label: 'Data', key: 'data' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // PVCs
+        async function renderPVCs() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/persistentvolumeclaims${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Persistent Volume Claims</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
+                    { label: 'Status', key: 'status', render: r => `<span class="${statusClass(r.status)}">${r.status}</span>` },
+                    { label: 'Volume', key: 'volume' },
+                    { label: 'Capacity', key: 'capacity' },
+                    { label: 'Storage Class', key: 'storageClass' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // PVs
+        async function renderPVs() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/persistentvolumes`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Persistent Volumes</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Capacity', key: 'capacity' },
+                    { label: 'Reclaim Policy', key: 'reclaimPolicy' },
+                    { label: 'Status', key: 'status', render: r => `<span class="${statusClass(r.status)}">${r.status}</span>` },
+                    { label: 'Claim', key: 'claim' },
+                    { label: 'Storage Class', key: 'storageClass' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // Storage Classes
+        async function renderStorageClasses() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/storageclasses`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Storage Classes</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}${r.isDefault ? ' (default)' : ''}</span>` },
+                    { label: 'Provisioner', key: 'provisioner' },
+                    { label: 'Reclaim Policy', key: 'reclaimPolicy' },
+                    { label: 'Volume Binding', key: 'volumeBinding' },
+                    { label: 'Allow Expansion', key: 'allowExpansion', render: r => r.allowExpansion ? 'Yes' : 'No' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // Cluster Roles
+        async function renderClusterRoles() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/clusterroles`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Cluster Roles</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Rules', key: 'rules' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // Cluster Role Bindings
+        async function renderClusterRoleBindings() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/clusterrolebindings`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Cluster Role Bindings</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Role', key: 'role' },
+                    { label: 'Subjects', key: 'subjects' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // Namespaces List
+        async function renderNamespacesList() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/namespaces`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Namespaces</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="changeNamespace('${r.name}', true); navigate('pods');">${r.name}</span>` },
+                    { label: 'Status', key: 'status', render: r => `<span class="${statusClass(r.status)}">${r.status}</span>` },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // Network Policies
+        async function renderNetworkPolicies() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/networkpolicies${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Network Policies</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('networkpolicies', '${r.namespace}', '${r.name}')">${r.name}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
+                    { label: 'Pod Selector', key: 'podSelector' },
+                    { label: 'Ingress Rules', key: 'ingress' },
+                    { label: 'Egress Rules', key: 'egress' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // Service Accounts
+        async function renderServiceAccounts() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/serviceaccounts${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Service Accounts</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('serviceaccounts', '${r.namespace}', '${r.name}')">${r.name}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
+                    { label: 'Secrets', key: 'secrets' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // Horizontal Pod Autoscalers
+        async function renderHPAs() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/horizontalpodautoscalers${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Horizontal Pod Autoscalers</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('horizontalpodautoscalers', '${r.namespace}', '${r.name}')">${r.name}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
+                    { label: 'Reference', key: 'reference' },
+                    { label: 'Targets', key: 'targets' },
+                    { label: 'Min Pods', key: 'minPods' },
+                    { label: 'Max Pods', key: 'maxPods' },
+                    { label: 'Replicas', key: 'currentReplicas', render: r => `${r.currentReplicas}/${r.desiredReplicas}` },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // Roles
+        async function renderRoles() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/roles${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Roles</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('roles', '${r.namespace}', '${r.name}')">${r.name}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
+                    { label: 'Rules', key: 'rules' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // Role Bindings
+        async function renderRoleBindings() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/rolebindings${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Role Bindings</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('rolebindings', '${r.namespace}', '${r.name}')">${r.name}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
+                    { label: 'Role', key: 'role' },
+                    { label: 'Subjects', key: 'subjects' },
+                    { label: 'Age', key: 'age', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // Events
+        async function renderEvents() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
+            try {
+                const data = await fetch(`${API_BASE}/api/events${getNamespaceParam()}`).then(r => r.json());
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Events</h1>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Type', key: 'type', render: r => `<span class="${r.type === 'Warning' ? 'text-yellow-400' : 'text-green-400'}">${r.type}</span>` },
+                    { label: 'Reason', key: 'reason' },
+                    { label: 'Object', key: 'involvedObject', class: 'text-k8s-blue' },
+                    { label: 'Message', key: 'message', class: 'text-slate-400 text-xs' },
+                    { label: 'Count', key: 'count' },
+                    { label: 'Last Seen', key: 'lastSeen', class: 'text-slate-400' }
+                ], getItems(data))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // Generic resource detail viewer
+        async function showResourceDetail(resourceType, namespace, name) {
+            try {
+                let url = `${API_BASE}/api/${resourceType}`;
+                if (namespace) {
+                    url += `/${namespace}/${name}`;
+                } else {
+                    url += `/${name}`;
+                }
+
+                const data = await fetch(url).then(r => r.json());
+
+                // Update breadcrumb to show detail view
+                updateBreadcrumb(resourceType, name);
+
+                document.getElementById('modal-title').textContent = `${formatViewName(resourceType.replace(/s$/, ''))}: ${namespace ? namespace + '/' : ''}${name}`;
+                document.getElementById('modal-content').innerHTML = `
+                    <div class="space-y-4">
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-slate-400 mb-2">Metadata</h3>
+                            <div class="grid grid-cols-2 gap-2 text-sm">
+                                <div><span class="text-slate-400">Name:</span> ${data.metadata?.name || name}</div>
+                                ${namespace ? `<div><span class="text-slate-400">Namespace:</span> ${data.metadata?.namespace || namespace}</div>` : ''}
+                                <div><span class="text-slate-400">UID:</span> <span class="text-xs">${data.metadata?.uid || '-'}</span></div>
+                                <div><span class="text-slate-400">Created:</span> ${data.metadata?.creationTimestamp || '-'}</div>
+                            </div>
+                        </div>
+                        ${data.metadata?.labels && Object.keys(data.metadata.labels).length > 0 ? `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-slate-400 mb-2">Labels</h3>
+                            <div class="flex flex-wrap gap-2">
+                                ${Object.entries(data.metadata.labels).map(([k, v]) => `
+                                    <span class="px-2 py-1 bg-slate-600 rounded text-xs">${k}: ${v}</span>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        ${data.metadata?.annotations && Object.keys(data.metadata.annotations).length > 0 ? `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-slate-400 mb-2">Annotations</h3>
+                            <div class="space-y-1 text-xs">
+                                ${Object.entries(data.metadata.annotations).slice(0, 10).map(([k, v]) => `
+                                    <div><span class="text-slate-400">${k}:</span> ${String(v).substring(0, 100)}${String(v).length > 100 ? '...' : ''}</div>
+                                `).join('')}
+                                ${Object.keys(data.metadata.annotations).length > 10 ? `<div class="text-slate-500">... and ${Object.keys(data.metadata.annotations).length - 10} more</div>` : ''}
+                            </div>
+                        </div>
+                        ` : ''}
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-slate-400 mb-2">Raw YAML</h3>
+                            <pre class="text-xs overflow-auto max-h-64 bg-slate-800 p-2 rounded">${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('detail-modal').classList.remove('hidden');
+            } catch (err) {
+                console.error('Failed to load resource detail:', err);
+            }
+        }
+
+        // Utilities
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('detail-modal').classList.add('hidden');
+        }
+
+        // Close modal on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Close modal on backdrop click
+        document.getElementById('detail-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'detail-modal') closeModal();
+        });
+
+        // Theme toggle
+        function toggleTheme() {
+            const body = document.body;
+            const icon = document.getElementById('theme-icon');
+
+            if (body.classList.contains('light')) {
+                body.classList.remove('light');
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.classList.add('light');
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        // Load saved theme on page load
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light');
+                const icon = document.getElementById('theme-icon');
+                if (icon) {
+                    icon.classList.remove('fa-sun');
+                    icon.classList.add('fa-moon');
+                }
+            }
+        })();
+    </script>
+</body>
+
+</html>
