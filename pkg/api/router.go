@@ -69,9 +69,11 @@ func SetupRouter() *gin.Engine {
 			cluster.GET("/nodes", handlers.GetClusterNodes)
 			cluster.GET("/nodes/:name", handlers.GetClusterNode)
 
+			// Generic resource watch (SSE) — pods, deployments, statefulsets, jobs, ...
+			cluster.GET("/watch/:kind", handlers.WatchClusterResource)
+
 			// Workloads - Pods
 			cluster.GET("/pods", handlers.GetClusterPods)
-			cluster.GET("/pods/watch", handlers.WatchClusterPods)
 			cluster.GET("/pods/:namespace/:name", handlers.GetClusterPodDetail)
 			cluster.PUT("/pods/:namespace/:name", handlers.UpdateClusterPod)
 			cluster.DELETE("/pods/:namespace/:name", handlers.DeleteClusterPod)

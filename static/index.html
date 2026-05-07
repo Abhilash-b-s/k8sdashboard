@@ -823,9 +823,10 @@
 
         // Navigation
         function navigate(view, detail = null) {
-            // Close any view-scoped streams when leaving their view.
-            if (currentView === 'pods' && view !== 'pods' && typeof podsClose === 'function') {
-                podsClose();
+            // Close any view-scoped streams when leaving a live-table view.
+            const LIVE_VIEWS = new Set(['pods', 'deployments', 'statefulsets', 'jobs']);
+            if (LIVE_VIEWS.has(currentView) && !LIVE_VIEWS.has(view)) {
+                liveTable.close();
             }
             currentView = view;
             updateActiveNav(view);
@@ -1345,212 +1346,220 @@
             }
         }
 
-        // Pods (SSE-driven live view)
-        let _podsWatcher = null;
-        let _podsByKey = new Map();
-        let _podsResyncTimer = null;
+        // ===========================================================
+        // Generic live-table backed by the SSE watch endpoint.
+        //   liveTable.open({ kind, title, columns, actions, ... })
+        // Manages: scaffold render, SSE stream, snapshot/add/update/delete
+        // events, periodic reconcile, namespace filtering, and cleanup on
+        // navigate.
+        // ===========================================================
+        const liveTable = {
+            es: null,
+            resyncTimer: null,
+            cfg: null,
+            rowsByKey: new Map(),
+            tableId: 'live-table',
+            countId: 'live-count',
+            liveId: 'live-status',
 
-        function podsClose() {
-            if (_podsWatcher) { _podsWatcher.close(); _podsWatcher = null; }
-            if (_podsResyncTimer) { clearInterval(_podsResyncTimer); _podsResyncTimer = null; }
-        }
+            open(cfg) {
+                this.close();
+                this.cfg = cfg;
+                this.rowsByKey = new Map();
+                this._renderScaffold();
+                if (!currentCluster) return;
+                this._setStatus('connecting');
 
-        // Safety net: re-fetch /pods periodically and reconcile against the
-        // local cache so that any events missed by SSE (slow client, drop,
-        // network blip) recover within ~10s.
-        async function podsResync() {
-            if (!currentCluster) return;
-            try {
-                const data = await fetch(`${getClusterAPI()}/pods`).then(r => r.json());
-                const items = getItems(data);
-                const newKeys = new Set(items.map(p => `${p.namespace}/${p.name}`));
-                for (const p of items) {
-                    const key = `${p.namespace}/${p.name}`;
-                    const cur = _podsByKey.get(key);
-                    if (!cur || cur.status !== p.status || cur.ready !== p.ready ||
-                        cur.restarts !== p.restarts || cur.node !== p.node || cur.age !== p.age) {
-                        podsUpsert(p);
+                // Fallback to REST if SSE doesn't deliver in 3s.
+                const fallbackTimer = setTimeout(async () => {
+                    if (this.rowsByKey.size === 0) {
+                        try {
+                            const data = await fetch(`${getClusterAPI()}/${cfg.restPath || cfg.kind}`).then(r => r.json());
+                            const items = getItems(data);
+                            items.forEach(r => this.rowsByKey.set(this._keyOf(r), r));
+                            this._renderAll();
+                        } catch (_) {}
                     }
-                }
-                for (const key of [..._podsByKey.keys()]) {
-                    if (!newKeys.has(key)) podsRemove(key);
-                }
-            } catch (_) { /* ignore */ }
-        }
+                }, 3000);
 
-        function podsRowHTML(p) {
-            const ns = p.namespace || '';
-            const nm = p.name || '';
-            return `
-                <td class="px-4 py-3 text-sm">
-                    <span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showPodDetail('${ns}', '${nm}')">${nm}</span>
-                </td>
-                <td class="px-4 py-3 text-sm cell-namespace">${ns}</td>
-                <td class="px-4 py-3 text-sm"><span class="${statusClass(p.status)}">${p.status || ''}</span></td>
-                <td class="px-4 py-3 text-sm">${p.ready || ''}</td>
-                <td class="px-4 py-3 text-sm">${p.node || ''}</td>
-                <td class="px-4 py-3 text-sm text-slate-400">${p.age || ''}</td>
-                <td class="px-4 py-3 text-sm">
-                    <button onclick="viewLogs('${ns}', '${nm}')" class="text-blue-400 hover:text-blue-300 mr-2" title="View Logs"><i class="fas fa-file-alt"></i></button>
-                    <button onclick="editResourceYaml('pods', '${ns}', '${nm}')" class="text-green-400 hover:text-green-300 mr-2" title="Edit"><i class="fas fa-edit"></i></button>
-                    <button onclick="deletePod('${ns}', '${nm}')" class="text-red-400 hover:text-red-300" title="Delete"><i class="fas fa-trash"></i></button>
-                </td>
-            `;
-        }
-
-        function podsPassesFilter(p) {
-            return !currentNamespace || p.namespace === currentNamespace;
-        }
-
-        function podsRenderAll() {
-            const tbody = document.querySelector('#pods-table tbody');
-            if (!tbody) return;
-            const rows = [..._podsByKey.values()]
-                .filter(podsPassesFilter)
-                .sort((a, b) => {
-                    const ns = (a.namespace || '').localeCompare(b.namespace || '');
-                    return ns !== 0 ? ns : (a.name || '').localeCompare(b.name || '');
+                this.es = new EventSource(`${getClusterAPI()}/watch/${cfg.kind}`);
+                this.es.addEventListener('snapshot', (e) => {
+                    clearTimeout(fallbackTimer);
+                    this._setStatus('live');
+                    const rows = JSON.parse(e.data);
+                    this.rowsByKey = new Map(rows.map(r => [this._keyOf(r), r]));
+                    this._renderAll();
                 });
-            tbody.innerHTML = rows.map(p => `<tr data-key="${p.namespace}/${p.name}" class="hover:bg-slate-700/50">${podsRowHTML(p)}</tr>`).join('');
-            podsUpdateCount(rows.length);
-        }
+                const onChange = (type) => (e) => {
+                    this._setStatus('live');
+                    const ev = JSON.parse(e.data);
+                    if (type === 'delete') {
+                        if (ev.key) this._remove(ev.key);
+                    } else if (ev.row) {
+                        this._upsert(ev.row);
+                    }
+                };
+                this.es.addEventListener('add', onChange('add'));
+                this.es.addEventListener('update', onChange('update'));
+                this.es.addEventListener('delete', onChange('delete'));
+                this.es.addEventListener('ping', () => this._setStatus('live'));
+                this.es.onerror = () => { this._setStatus('reconnecting'); this._resync(); };
 
-        function podsUpsert(p) {
-            const key = `${p.namespace}/${p.name}`;
-            _podsByKey.set(key, p);
-            const tbody = document.querySelector('#pods-table tbody');
-            if (!tbody) return;
-            if (!podsPassesFilter(p)) {
-                const existing = tbody.querySelector(`tr[data-key="${CSS.escape(key)}"]`);
-                if (existing) { existing.remove(); podsUpdateCount(tbody.children.length); }
-                return;
-            }
-            let tr = tbody.querySelector(`tr[data-key="${CSS.escape(key)}"]`);
-            if (tr) {
-                tr.innerHTML = podsRowHTML(p);
-                tr.classList.add('bg-yellow-500/10');
-                setTimeout(() => tr && tr.classList.remove('bg-yellow-500/10'), 600);
-            } else {
-                tr = document.createElement('tr');
-                tr.setAttribute('data-key', key);
-                tr.className = 'hover:bg-slate-700/50';
-                tr.innerHTML = podsRowHTML(p);
-                tbody.appendChild(tr);
-                podsUpdateCount(tbody.children.length);
-            }
-        }
+                this.resyncTimer = setInterval(() => this._resync(), 10000);
+            },
 
-        function podsRemove(key) {
-            _podsByKey.delete(key);
-            const tbody = document.querySelector('#pods-table tbody');
-            if (!tbody) return;
-            const tr = tbody.querySelector(`tr[data-key="${CSS.escape(key)}"]`);
-            if (tr) { tr.remove(); podsUpdateCount(tbody.children.length); }
-        }
+            close() {
+                if (this.es) { this.es.close(); this.es = null; }
+                if (this.resyncTimer) { clearInterval(this.resyncTimer); this.resyncTimer = null; }
+                this.cfg = null;
+                this.rowsByKey = new Map();
+            },
 
-        function podsUpdateCount(n) {
-            const el = document.getElementById('pods-count');
-            if (el) el.textContent = `${n} total`;
-        }
+            // Optimistic delete used by deletePod/deleteDeployment etc.
+            removeRow(key) { this._remove(key); },
 
-        function podsSetLive(state) {
-            const el = document.getElementById('pods-live');
-            if (!el) return;
-            if (state === 'live') {
-                el.innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-green-400 mr-1.5 align-middle animate-pulse"></span>Live';
-                el.className = 'text-xs text-green-400 flex items-center';
-            } else if (state === 'connecting') {
-                el.innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-yellow-400 mr-1.5 align-middle"></span>Connecting…';
-                el.className = 'text-xs text-yellow-400 flex items-center';
-            } else {
-                el.innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-red-400 mr-1.5 align-middle"></span>Reconnecting…';
-                el.className = 'text-xs text-red-400 flex items-center';
-            }
-        }
+            _keyOf(r) { return `${r.namespace || ''}/${r.name || ''}`; },
+
+            _passesFilter(r) {
+                if (!this.cfg.namespaceFilter) return true;
+                return !currentNamespace || r.namespace === currentNamespace;
+            },
+
+            _sort(a, b) {
+                const ns = (a.namespace || '').localeCompare(b.namespace || '');
+                return ns !== 0 ? ns : (a.name || '').localeCompare(b.name || '');
+            },
+
+            _renderScaffold() {
+                const cfg = this.cfg;
+                const content = document.getElementById('content');
+                const headers = cfg.columns.map(c => `<th class="text-left">${c.label}</th>`).join('') + (cfg.actions ? '<th class="text-left">Actions</th>' : '');
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <h1 class="text-xl font-bold">${cfg.title}</h1>
+                            <span id="${this.liveId}" class="text-xs text-yellow-400 flex items-center"><span class="inline-block w-2 h-2 rounded-full bg-yellow-400 mr-1.5 align-middle"></span>Connecting…</span>
+                        </div>
+                        <span id="${this.countId}" class="text-sm text-slate-400">…</span>
+                    </div>
+                    <div id="${this.tableId}" class="bg-slate-800 rounded-lg border border-slate-700">
+                        <div class="table-container">
+                            <table class="w-full">
+                                <thead class="table-header"><tr>${headers}</tr></thead>
+                                <tbody class="divide-y divide-slate-700"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            },
+
+            _rowHTML(r) {
+                const cells = this.cfg.columns.map(c => `<td class="px-4 py-3 text-sm ${c.class || ''}">${c.render ? c.render(r) : (r[c.key] ?? '')}</td>`).join('');
+                const actions = this.cfg.actions ? `<td class="px-4 py-3 text-sm">${this.cfg.actions(r)}</td>` : '';
+                return cells + actions;
+            },
+
+            _renderAll() {
+                const tbody = document.querySelector(`#${this.tableId} tbody`);
+                if (!tbody) return;
+                const rows = [...this.rowsByKey.values()].filter(r => this._passesFilter(r)).sort((a, b) => this._sort(a, b));
+                tbody.innerHTML = rows.map(r => `<tr data-key="${this._keyOf(r)}" class="hover:bg-slate-700/50">${this._rowHTML(r)}</tr>`).join('');
+                this._updateCount(rows.length);
+            },
+
+            _upsert(r) {
+                const key = this._keyOf(r);
+                this.rowsByKey.set(key, r);
+                const tbody = document.querySelector(`#${this.tableId} tbody`);
+                if (!tbody) return;
+                if (!this._passesFilter(r)) {
+                    const existing = tbody.querySelector(`tr[data-key="${CSS.escape(key)}"]`);
+                    if (existing) { existing.remove(); this._updateCount(tbody.children.length); }
+                    return;
+                }
+                let tr = tbody.querySelector(`tr[data-key="${CSS.escape(key)}"]`);
+                if (tr) {
+                    tr.innerHTML = this._rowHTML(r);
+                    tr.classList.add('bg-yellow-500/10');
+                    setTimeout(() => tr && tr.classList.remove('bg-yellow-500/10'), 600);
+                } else {
+                    tr = document.createElement('tr');
+                    tr.setAttribute('data-key', key);
+                    tr.className = 'hover:bg-slate-700/50';
+                    tr.innerHTML = this._rowHTML(r);
+                    tbody.appendChild(tr);
+                    this._updateCount(tbody.children.length);
+                }
+            },
+
+            _remove(key) {
+                this.rowsByKey.delete(key);
+                const tbody = document.querySelector(`#${this.tableId} tbody`);
+                if (!tbody) return;
+                const tr = tbody.querySelector(`tr[data-key="${CSS.escape(key)}"]`);
+                if (tr) { tr.remove(); this._updateCount(tbody.children.length); }
+            },
+
+            _updateCount(n) {
+                const el = document.getElementById(this.countId);
+                if (el) el.textContent = `${n} total`;
+            },
+
+            _setStatus(s) {
+                const el = document.getElementById(this.liveId);
+                if (!el) return;
+                if (s === 'live') {
+                    el.innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-green-400 mr-1.5 align-middle animate-pulse"></span>Live';
+                    el.className = 'text-xs text-green-400 flex items-center';
+                } else if (s === 'connecting') {
+                    el.innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-yellow-400 mr-1.5 align-middle"></span>Connecting…';
+                    el.className = 'text-xs text-yellow-400 flex items-center';
+                } else {
+                    el.innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-red-400 mr-1.5 align-middle"></span>Reconnecting…';
+                    el.className = 'text-xs text-red-400 flex items-center';
+                }
+            },
+
+            async _resync() {
+                if (!this.cfg || !currentCluster) return;
+                try {
+                    const data = await fetch(`${getClusterAPI()}/${this.cfg.restPath || this.cfg.kind}`).then(r => r.json());
+                    const items = getItems(data);
+                    const newKeys = new Set(items.map(r => this._keyOf(r)));
+                    for (const r of items) {
+                        const key = this._keyOf(r);
+                        const cur = this.rowsByKey.get(key);
+                        if (!cur || JSON.stringify(cur) !== JSON.stringify(r)) this._upsert(r);
+                    }
+                    for (const key of [...this.rowsByKey.keys()]) {
+                        if (!newKeys.has(key)) this._remove(key);
+                    }
+                } catch (_) {}
+            },
+        };
+        // Backward-compat for callers that referenced the old names.
+        function podsClose() { liveTable.close(); }
+        function podsRemove(key) { liveTable.removeRow(key); }
 
         async function renderPods() {
-            podsClose();
-            _podsByKey = new Map();
-            const content = document.getElementById('content');
-            content.innerHTML = `
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-3">
-                        <h1 class="text-xl font-bold">Pods</h1>
-                        <span id="pods-live" class="text-xs text-yellow-400 flex items-center"><span class="inline-block w-2 h-2 rounded-full bg-yellow-400 mr-1.5 align-middle"></span>Connecting…</span>
-                    </div>
-                    <span id="pods-count" class="text-sm text-slate-400">…</span>
-                </div>
-                <div id="pods-table" class="bg-slate-800 rounded-lg border border-slate-700">
-                    <div class="table-container">
-                        <table class="w-full">
-                            <thead class="table-header">
-                                <tr>
-                                    <th class="text-left">Name</th>
-                                    <th class="text-left">Namespace</th>
-                                    <th class="text-left">Status</th>
-                                    <th class="text-left">Ready</th>
-                                    <th class="text-left">Node</th>
-                                    <th class="text-left">Age</th>
-                                    <th class="text-left">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-700"></tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-
-            // Fallback: if SSE never delivers a snapshot in 3s, populate from REST.
-            const fallbackTimer = setTimeout(async () => {
-                if (_podsByKey.size === 0) {
-                    try {
-                        const data = await fetch(`${getClusterAPI()}/pods`).then(r => r.json());
-                        const items = getItems(data);
-                        items.forEach(p => _podsByKey.set(`${p.namespace}/${p.name}`, p));
-                        podsRenderAll();
-                    } catch (_) { /* ignore */ }
-                }
-            }, 3000);
-
-            if (!currentCluster) {
-                content.innerHTML = renderErrorState('pods', 'No cluster selected.');
-                return;
-            }
-            podsSetLive('connecting');
-            _podsWatcher = new EventSource(`${getClusterAPI()}/pods/watch`);
-
-            _podsWatcher.addEventListener('snapshot', (e) => {
-                clearTimeout(fallbackTimer);
-                podsSetLive('live');
-                const rows = JSON.parse(e.data);
-                _podsByKey = new Map(rows.map(p => [`${p.namespace}/${p.name}`, p]));
-                podsRenderAll();
+            liveTable.open({
+                kind: 'pods',
+                title: 'Pods',
+                namespaceFilter: true,
+                columns: [
+                    { label: 'Name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showPodDetail('${r.namespace}', '${r.name}')">${r.name}</span>` },
+                    { label: 'Namespace', class: 'cell-namespace', render: r => r.namespace || '' },
+                    { label: 'Status', render: r => `<span class="${statusClass(r.status)}">${r.status || ''}</span>` },
+                    { label: 'Ready', render: r => r.ready || '' },
+                    { label: 'Node', render: r => r.node || '' },
+                    { label: 'Age', class: 'text-slate-400', render: r => r.age || '' },
+                ],
+                actions: r => `
+                    <button onclick="viewLogs('${r.namespace}', '${r.name}')" class="text-blue-400 hover:text-blue-300 mr-2" title="View Logs"><i class="fas fa-file-alt"></i></button>
+                    <button onclick="editResourceYaml('pods', '${r.namespace}', '${r.name}')" class="text-green-400 hover:text-green-300 mr-2" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button onclick="deletePod('${r.namespace}', '${r.name}')" class="text-red-400 hover:text-red-300" title="Delete"><i class="fas fa-trash"></i></button>
+                `,
             });
-            _podsWatcher.addEventListener('add', (e) => {
-                podsSetLive('live');
-                const ev = JSON.parse(e.data);
-                if (ev.pod) podsUpsert(ev.pod);
-            });
-            _podsWatcher.addEventListener('update', (e) => {
-                podsSetLive('live');
-                const ev = JSON.parse(e.data);
-                if (ev.pod) podsUpsert(ev.pod);
-            });
-            _podsWatcher.addEventListener('delete', (e) => {
-                podsSetLive('live');
-                const ev = JSON.parse(e.data);
-                if (ev.key) podsRemove(ev.key);
-            });
-            _podsWatcher.addEventListener('ping', () => podsSetLive('live'));
-            _podsWatcher.onerror = () => {
-                podsSetLive('reconnecting');
-                // Don't wait for the next 10s tick — reconcile right away.
-                podsResync();
-            };
-
-            // Safety-net poll every 10s. Cheap, and guarantees recovery from
-            // any missed SSE events (slow client, transient disconnect, etc.).
-            _podsResyncTimer = setInterval(podsResync, 10000);
         }
 
         async function showPodDetail(namespace, name) {
@@ -1683,8 +1692,8 @@
                 // arrives via SSE 'add' — we don't want to tear down the
                 // EventSource (refreshCurrentView re-opens it and can race
                 // with the add event for the new pod).
-                if (currentView === 'pods' && _podsWatcher) {
-                    podsRemove(`${namespace}/${name}`);
+                if (currentView === 'pods' && liveTable.es) {
+                    liveTable.removeRow(`${namespace}/${name}`);
                 } else {
                     refreshCurrentView();
                 }
@@ -1728,7 +1737,11 @@
             if (!confirm(`Delete deployment "${name}" in namespace "${namespace}"? This will also delete all pods managed by this deployment.`)) return;
             try {
                 await fetch(`${getClusterAPI()}/deployments/${namespace}/${name}`, { method: 'DELETE' });
-                refreshCurrentView();
+                if (currentView === 'deployments' && liveTable.es) {
+                    liveTable.removeRow(`${namespace}/${name}`);
+                } else {
+                    refreshCurrentView();
+                }
             } catch (err) {
                 alert('Error: ' + err.message);
             }
@@ -1759,7 +1772,11 @@
             if (!confirm(`Delete statefulset "${name}" in namespace "${namespace}"? This will also delete all pods managed by this statefulset.`)) return;
             try {
                 await fetch(`${getClusterAPI()}/statefulsets/${namespace}/${name}`, { method: 'DELETE' });
-                refreshCurrentView();
+                if (currentView === 'statefulsets' && liveTable.es) {
+                    liveTable.removeRow(`${namespace}/${name}`);
+                } else {
+                    refreshCurrentView();
+                }
             } catch (err) {
                 alert('Error: ' + err.message);
             }
@@ -1960,42 +1977,25 @@
 
         // Deployments
         async function renderDeployments() {
-            const content = document.getElementById('content');
-            content.innerHTML = skeletonTable(6, 8);
-            try {
-                const data = await fetch(`${getClusterAPI()}/deployments${getNamespaceParam()}`).then(r => r.json());
-                content.innerHTML = `
-                    <div class="flex items-center justify-between mb-4">
-                        <h1 class="text-xl font-bold">Deployments</h1>
-                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
-                    </div>
-                    <div class="bg-slate-800 rounded-lg border border-slate-700">
-                        ${renderTable([
-                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showDeploymentDetail('${r.namespace}', '${r.name}')">${r.name}</span>` },
-                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
-                    { label: 'Ready', key: 'ready' },
-                    { label: 'Up-to-date', key: 'upToDate' },
-                    { label: 'Available', key: 'available' },
-                    { label: 'Age', key: 'age', class: 'text-slate-400' }
-                ], getItems(data), r => `
-                    <button onclick="editDeployment('${r.namespace}', '${r.name}')" class="text-green-400 hover:text-green-300 mr-2" title="Edit">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button onclick="scaleDeployment('${r.namespace}', '${r.name}')" class="text-blue-400 hover:text-blue-300 mr-2" title="Scale">
-                        <i class="fas fa-expand-arrows-alt"></i>
-                    </button>
-                    <button onclick="restartDeployment('${r.namespace}', '${r.name}')" class="text-yellow-400 hover:text-yellow-300 mr-2" title="Restart">
-                        <i class="fas fa-redo"></i>
-                    </button>
-                    <button onclick="deleteDeployment('${r.namespace}', '${r.name}')" class="text-red-400 hover:text-red-300" title="Delete">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                `)}
-                    </div>
-                `;
-            } catch (err) {
-                content.innerHTML = renderErrorState(currentView, err.message);
-            }
+            liveTable.open({
+                kind: 'deployments',
+                title: 'Deployments',
+                namespaceFilter: true,
+                columns: [
+                    { label: 'Name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showDeploymentDetail('${r.namespace}', '${r.name}')">${r.name}</span>` },
+                    { label: 'Namespace', class: 'cell-namespace', render: r => r.namespace || '' },
+                    { label: 'Ready', render: r => r.ready || '' },
+                    { label: 'Up-to-date', render: r => r.upToDate ?? 0 },
+                    { label: 'Available', render: r => r.available ?? 0 },
+                    { label: 'Age', class: 'text-slate-400', render: r => r.age || '' },
+                ],
+                actions: r => `
+                    <button onclick="editResourceYaml('deployments', '${r.namespace}', '${r.name}')" class="text-green-400 hover:text-green-300 mr-2" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button onclick="scaleDeployment('${r.namespace}', '${r.name}')" class="text-blue-400 hover:text-blue-300 mr-2" title="Scale"><i class="fas fa-expand-arrows-alt"></i></button>
+                    <button onclick="restartDeployment('${r.namespace}', '${r.name}')" class="text-yellow-400 hover:text-yellow-300 mr-2" title="Restart"><i class="fas fa-redo"></i></button>
+                    <button onclick="deleteDeployment('${r.namespace}', '${r.name}')" class="text-red-400 hover:text-red-300" title="Delete"><i class="fas fa-trash"></i></button>
+                `,
+            });
         }
 
         async function showDeploymentDetail(namespace, name) {
@@ -2127,37 +2127,22 @@
 
         // StatefulSets
         async function renderStatefulSets() {
-            const content = document.getElementById('content');
-            content.innerHTML = skeletonTable(6, 8);
-            try {
-                const data = await fetch(`${getClusterAPI()}/statefulsets${getNamespaceParam()}`).then(r => r.json());
-                content.innerHTML = `
-                    <div class="flex items-center justify-between mb-4">
-                        <h1 class="text-xl font-bold">Stateful Sets</h1>
-                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
-                    </div>
-                    <div class="bg-slate-800 rounded-lg border border-slate-700">
-                        ${renderTable([
-                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
-                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
-                    { label: 'Ready', key: 'ready' },
-                    { label: 'Age', key: 'age', class: 'text-slate-400' }
-                ], getItems(data), r => `
-                    <button onclick="editStatefulSet('${r.namespace}', '${r.name}')" class="text-green-400 hover:text-green-300 mr-2" title="Edit">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button onclick="scaleStatefulSet('${r.namespace}', '${r.name}')" class="text-blue-400 hover:text-blue-300 mr-2" title="Scale">
-                        <i class="fas fa-expand-arrows-alt"></i>
-                    </button>
-                    <button onclick="deleteStatefulSet('${r.namespace}', '${r.name}')" class="text-red-400 hover:text-red-300" title="Delete">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                `)}
-                    </div>
-                `;
-            } catch (err) {
-                content.innerHTML = renderErrorState(currentView, err.message);
-            }
+            liveTable.open({
+                kind: 'statefulsets',
+                title: 'Stateful Sets',
+                namespaceFilter: true,
+                columns: [
+                    { label: 'Name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Namespace', class: 'cell-namespace', render: r => r.namespace || '' },
+                    { label: 'Ready', render: r => r.ready || '' },
+                    { label: 'Age', class: 'text-slate-400', render: r => r.age || '' },
+                ],
+                actions: r => `
+                    <button onclick="editResourceYaml('statefulsets', '${r.namespace}', '${r.name}')" class="text-green-400 hover:text-green-300 mr-2" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button onclick="scaleStatefulSet('${r.namespace}', '${r.name}')" class="text-blue-400 hover:text-blue-300 mr-2" title="Scale"><i class="fas fa-expand-arrows-alt"></i></button>
+                    <button onclick="deleteStatefulSet('${r.namespace}', '${r.name}')" class="text-red-400 hover:text-red-300" title="Delete"><i class="fas fa-trash"></i></button>
+                `,
+            });
         }
 
         // ReplicaSets
@@ -2189,28 +2174,22 @@
 
         // Jobs
         async function renderJobs() {
-            const content = document.getElementById('content');
-            content.innerHTML = skeletonTable(6, 8);
-            try {
-                const data = await fetch(`${getClusterAPI()}/jobs${getNamespaceParam()}`).then(r => r.json());
-                content.innerHTML = `
-                    <div class="flex items-center justify-between mb-4">
-                        <h1 class="text-xl font-bold">Jobs</h1>
-                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
-                    </div>
-                    <div class="bg-slate-800 rounded-lg border border-slate-700">
-                        ${renderTable([
-                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
-                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
-                    { label: 'Completions', key: 'completions' },
-                    { label: 'Duration', key: 'duration' },
-                    { label: 'Age', key: 'age', class: 'text-slate-400' }
-                ], getItems(data))}
-                    </div>
-                `;
-            } catch (err) {
-                content.innerHTML = renderErrorState(currentView, err.message);
-            }
+            liveTable.open({
+                kind: 'jobs',
+                title: 'Jobs',
+                namespaceFilter: true,
+                columns: [
+                    { label: 'Name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Namespace', class: 'cell-namespace', render: r => r.namespace || '' },
+                    { label: 'Completions', render: r => r.completions || '' },
+                    { label: 'Succeeded', render: r => r.succeeded ?? 0 },
+                    { label: 'Failed', render: r => r.failed ?? 0 },
+                    { label: 'Age', class: 'text-slate-400', render: r => r.age || '' },
+                ],
+                actions: r => `
+                    <button onclick="editResourceYaml('jobs', '${r.namespace}', '${r.name}')" class="text-green-400 hover:text-green-300" title="Edit"><i class="fas fa-edit"></i></button>
+                `,
+            });
         }
 
         // CronJobs
