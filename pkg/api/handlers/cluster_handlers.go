@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -1144,42 +1145,55 @@ func StreamClusterLogs(c *gin.Context) {
 	namespace := c.Param("namespace")
 	podName := c.Param("pod")
 	container := c.Query("container")
-	follow := c.Query("follow") == "true"
+	follow := c.Query("follow") != "false"
 
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("X-Accel-Buffering", "no")
+
+	tailLines := int64(100)
 	opts := &corev1.PodLogOptions{
 		Follow:    follow,
-		TailLines: func() *int64 { v := int64(100); return &v }(),
+		TailLines: &tailLines,
 	}
 	if container != "" {
 		opts.Container = container
 	}
 
+	ctx, cancel := context.WithCancel(c.Request.Context())
+	defer cancel()
+
 	req := client.Clientset.CoreV1().Pods(namespace).GetLogs(podName, opts)
-	stream, err := req.Stream(context.Background())
+	stream, err := req.Stream(ctx)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.SSEvent("error", fmt.Sprintf("Failed to get logs: %v", err))
+		c.Writer.Flush()
 		return
 	}
 	defer stream.Close()
 
-	c.Writer.Header().Set("Content-Type", "text/event-stream")
-	c.Writer.Header().Set("Cache-Control", "no-cache")
-	c.Writer.Header().Set("Connection", "keep-alive")
-
-	buf := make([]byte, 2048)
+	reader := bufio.NewReader(stream)
 	for {
-		n, err := stream.Read(buf)
-		if n > 0 {
-			c.Writer.Write([]byte("data: "))
-			c.Writer.Write(buf[:n])
-			c.Writer.Write([]byte("\n\n"))
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+		line, err := reader.ReadString('\n')
+		if line != "" {
+			c.SSEvent("log", line)
 			c.Writer.Flush()
 		}
-		if err == io.EOF {
-			break
-		}
 		if err != nil {
-			break
+			if err == io.EOF {
+				if !follow {
+					return
+				}
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+			return
 		}
 	}
 }
