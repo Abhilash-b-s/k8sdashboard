@@ -16,6 +16,26 @@ type OverviewResponse struct {
 	TotalDeployments int      `json:"totalDeployments"`
 	TotalServices    int      `json:"totalServices"`
 	Namespaces       []string `json:"namespaces"`
+
+	// Cluster-wide allocation totals (sum across all nodes/pods).
+	// These are scheduler-style sums of pod requests/limits
+	// (init containers contribute as max(initMax, sumRegular)),
+	// matching what `kubectl describe node` reports.
+	CPURequestsMilli    int64 `json:"cpuRequestsMilli"`
+	CPULimitsMilli      int64 `json:"cpuLimitsMilli"`
+	CPUAllocatableMilli int64 `json:"cpuAllocatableMilli"`
+	MemRequestsBytes    int64 `json:"memRequestsBytes"`
+	MemLimitsBytes      int64 `json:"memLimitsBytes"`
+	MemAllocatableBytes int64 `json:"memAllocatableBytes"`
+	PodCount            int64 `json:"podCount"`
+	PodCapacity         int64 `json:"podCapacity"`
+
+	// Pre-computed percentages (0–100+, can exceed 100 for limits).
+	CPURequestPct float64 `json:"cpuRequestPct"`
+	CPULimitPct   float64 `json:"cpuLimitPct"`
+	MemRequestPct float64 `json:"memRequestPct"`
+	MemLimitPct   float64 `json:"memLimitPct"`
+	PodPct        float64 `json:"podPct"`
 }
 
 // ResourcesResponse represents resources grouped by namespace

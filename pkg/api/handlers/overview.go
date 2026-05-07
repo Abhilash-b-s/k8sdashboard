@@ -157,16 +157,31 @@ func GetOverview(c *gin.Context) {
 		namespaces = append(namespaces, ns)
 	}
 
+	alloc := computeAllocationTotals(pods, nodes)
+
 	response := OverviewResponse{
-		TotalNodes:       len(nodes),
-		ReadyNodes:       readyNodes,
-		TotalPods:        len(pods),
-		RunningPods:      runningPods,
-		PendingPods:      pendingPods,
-		FailedPods:       failedPods,
-		TotalDeployments: len(deploys),
-		TotalServices:    len(services),
-		Namespaces:       namespaces,
+		TotalNodes:          len(nodes),
+		ReadyNodes:          readyNodes,
+		TotalPods:           len(pods),
+		RunningPods:         runningPods,
+		PendingPods:         pendingPods,
+		FailedPods:          failedPods,
+		TotalDeployments:    len(deploys),
+		TotalServices:       len(services),
+		Namespaces:          namespaces,
+		CPURequestsMilli:    alloc.CPURequestsMilli,
+		CPULimitsMilli:      alloc.CPULimitsMilli,
+		CPUAllocatableMilli: alloc.CPUAllocatableMilli,
+		MemRequestsBytes:    alloc.MemRequestsBytes,
+		MemLimitsBytes:      alloc.MemLimitsBytes,
+		MemAllocatableBytes: alloc.MemAllocatableBytes,
+		PodCount:            alloc.PodCount,
+		PodCapacity:         alloc.PodCapacity,
+		CPURequestPct:       alloc.CPURequestPct,
+		CPULimitPct:         alloc.CPULimitPct,
+		MemRequestPct:       alloc.MemRequestPct,
+		MemLimitPct:         alloc.MemLimitPct,
+		PodPct:              alloc.PodPct,
 	}
 
 	c.JSON(http.StatusOK, response)

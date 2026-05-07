@@ -23,6 +23,7 @@ type ClusterClient struct {
 	Clientset       kubernetes.Interface
 	MetricsClient   *metricsv.Clientset
 	InformerFactory informers.SharedInformerFactory
+	RestConfig      *rest.Config
 	StopCh          chan struct{}
 }
 
@@ -132,6 +133,7 @@ func InitInClusterClient() error {
 		Clientset:       clientset,
 		MetricsClient:   metricsClient,
 		InformerFactory: informerFactory,
+		RestConfig:      config,
 		StopCh:          stopCh,
 	}
 
@@ -220,6 +222,7 @@ func createClientForContext(kubeconfigPath, contextName string) (*ClusterClient,
 		Clientset:       clientset,
 		MetricsClient:   metricsClient,
 		InformerFactory: informerFactory,
+		RestConfig:      restConfig,
 		StopCh:          stopCh,
 	}, nil
 }
@@ -507,6 +510,7 @@ func createClientFromConfig(config *clientcmdapi.Config, contextName string) (*C
 		Clientset:       clientset,
 		MetricsClient:   metricsClient,
 		InformerFactory: informerFactory,
+		RestConfig:      restConfig,
 		StopCh:          stopCh,
 	}, nil
 }

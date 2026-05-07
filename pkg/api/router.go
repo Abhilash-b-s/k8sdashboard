@@ -71,6 +71,7 @@ func SetupRouter() *gin.Engine {
 
 			// Workloads - Pods
 			cluster.GET("/pods", handlers.GetClusterPods)
+			cluster.GET("/pods/watch", handlers.WatchClusterPods)
 			cluster.GET("/pods/:namespace/:name", handlers.GetClusterPodDetail)
 			cluster.PUT("/pods/:namespace/:name", handlers.UpdateClusterPod)
 			cluster.DELETE("/pods/:namespace/:name", handlers.DeleteClusterPod)
@@ -165,6 +166,10 @@ func SetupRouter() *gin.Engine {
 			// Metrics
 			cluster.GET("/metrics/nodes", handlers.GetClusterNodeMetrics)
 			cluster.GET("/metrics/pods", handlers.GetClusterPodMetrics)
+
+			// Generic YAML edit (kubectl-edit-style) for any supported kind
+			cluster.GET("/yaml/:kind/:namespace/:name", handlers.GetClusterResourceYAML)
+			cluster.PUT("/yaml/:kind/:namespace/:name", handlers.UpdateClusterResourceYAML)
 		}
 
 		// ============================================

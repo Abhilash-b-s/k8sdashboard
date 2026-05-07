@@ -70,24 +70,116 @@ func GetClusterOverview(c *gin.Context) {
 		}
 	}
 
+	alloc := computeAllocationTotals(pods, nodes)
+
 	namespaces := make([]string, 0, len(namespaceSet))
 	for ns := range namespaceSet {
 		namespaces = append(namespaces, ns)
 	}
 
 	response := OverviewResponse{
-		TotalNodes:       len(nodes),
-		ReadyNodes:       readyNodes,
-		TotalPods:        len(pods),
-		RunningPods:      runningPods,
-		PendingPods:      pendingPods,
-		FailedPods:       failedPods,
-		TotalDeployments: len(deploys),
-		TotalServices:    len(services),
-		Namespaces:       namespaces,
+		TotalNodes:          len(nodes),
+		ReadyNodes:          readyNodes,
+		TotalPods:           len(pods),
+		RunningPods:         runningPods,
+		PendingPods:         pendingPods,
+		FailedPods:          failedPods,
+		TotalDeployments:    len(deploys),
+		TotalServices:       len(services),
+		Namespaces:          namespaces,
+		CPURequestsMilli:    alloc.CPURequestsMilli,
+		CPULimitsMilli:      alloc.CPULimitsMilli,
+		CPUAllocatableMilli: alloc.CPUAllocatableMilli,
+		MemRequestsBytes:    alloc.MemRequestsBytes,
+		MemLimitsBytes:      alloc.MemLimitsBytes,
+		MemAllocatableBytes: alloc.MemAllocatableBytes,
+		PodCount:            alloc.PodCount,
+		PodCapacity:         alloc.PodCapacity,
+		CPURequestPct:       alloc.CPURequestPct,
+		CPULimitPct:         alloc.CPULimitPct,
+		MemRequestPct:       alloc.MemRequestPct,
+		MemLimitPct:         alloc.MemLimitPct,
+		PodPct:              alloc.PodPct,
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+// allocationTotals captures cluster-wide request/limit/allocatable sums.
+type allocationTotals struct {
+	CPURequestsMilli, CPULimitsMilli, CPUAllocatableMilli int64
+	MemRequestsBytes, MemLimitsBytes, MemAllocatableBytes int64
+	PodCount, PodCapacity                                 int64
+	CPURequestPct, CPULimitPct                            float64
+	MemRequestPct, MemLimitPct, PodPct                    float64
+}
+
+// computeAllocationTotals sums pod requests/limits the same way `kubectl
+// describe node` does: skip terminated pods, and for each running pod take
+// max(any init container, sum of regular containers) per resource.
+func computeAllocationTotals(pods []*corev1.Pod, nodes []*corev1.Node) allocationTotals {
+	var t allocationTotals
+	for _, pod := range pods {
+		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+			continue
+		}
+		t.PodCount++
+		var rcpu, rmem, lcpu, lmem int64
+		for _, ct := range pod.Spec.Containers {
+			rcpu += ct.Resources.Requests.Cpu().MilliValue()
+			rmem += ct.Resources.Requests.Memory().Value()
+			lcpu += ct.Resources.Limits.Cpu().MilliValue()
+			lmem += ct.Resources.Limits.Memory().Value()
+		}
+		var icpu, imem, ilcpu, ilmem int64
+		for _, ct := range pod.Spec.InitContainers {
+			if v := ct.Resources.Requests.Cpu().MilliValue(); v > icpu {
+				icpu = v
+			}
+			if v := ct.Resources.Requests.Memory().Value(); v > imem {
+				imem = v
+			}
+			if v := ct.Resources.Limits.Cpu().MilliValue(); v > ilcpu {
+				ilcpu = v
+			}
+			if v := ct.Resources.Limits.Memory().Value(); v > ilmem {
+				ilmem = v
+			}
+		}
+		if icpu > rcpu {
+			rcpu = icpu
+		}
+		if imem > rmem {
+			rmem = imem
+		}
+		if ilcpu > lcpu {
+			lcpu = ilcpu
+		}
+		if ilmem > lmem {
+			lmem = ilmem
+		}
+		t.CPURequestsMilli += rcpu
+		t.MemRequestsBytes += rmem
+		t.CPULimitsMilli += lcpu
+		t.MemLimitsBytes += lmem
+	}
+	for _, n := range nodes {
+		t.CPUAllocatableMilli += n.Status.Allocatable.Cpu().MilliValue()
+		t.MemAllocatableBytes += n.Status.Allocatable.Memory().Value()
+		t.PodCapacity += n.Status.Allocatable.Pods().Value()
+	}
+	pct := func(num, den int64) float64 {
+		if den == 0 {
+			return 0
+		}
+		return float64(num) * 100 / float64(den)
+	}
+	t.CPURequestPct = pct(t.CPURequestsMilli, t.CPUAllocatableMilli)
+	t.CPULimitPct = pct(t.CPULimitsMilli, t.CPUAllocatableMilli)
+	t.MemRequestPct = pct(t.MemRequestsBytes, t.MemAllocatableBytes)
+	t.MemLimitPct = pct(t.MemLimitsBytes, t.MemAllocatableBytes)
+	t.PodPct = pct(t.PodCount, t.PodCapacity)
+	return t
 }
 
 func GetClusterNamespaces(c *gin.Context) {

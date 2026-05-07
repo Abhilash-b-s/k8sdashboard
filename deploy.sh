@@ -104,6 +104,11 @@ deploy_k8s() {
         kubectl apply -f "${K8S_DIR}/rbac.yaml"
     fi
 
+    if [ -f "${K8S_DIR}/metrics-server.yaml" ]; then
+        print_msg "$YELLOW" "Installing metrics-server (kube-system)..."
+        kubectl apply -f "${K8S_DIR}/metrics-server.yaml"
+    fi
+
     if [ -f "${K8S_DIR}/service.yaml" ]; then
         print_msg "$YELLOW" "Creating service..."
         kubectl apply -f "${K8S_DIR}/service.yaml"
