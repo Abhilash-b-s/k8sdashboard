@@ -414,6 +414,59 @@
             color: #1e293b;
         }
 
+        /* Light mode: Circular chart percentage text */
+        .light .percentage {
+            fill: #1e293b !important;
+        }
+
+        /* Light mode: Circular chart background */
+        .light .circle-bg {
+            stroke: #cbd5e1 !important;
+        }
+
+        /* Light mode: Breadcrumb - keep white text on blue header */
+        .light .breadcrumb {
+            color: #ffffff;
+        }
+
+        .light .breadcrumb .breadcrumb-category {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .light .breadcrumb .breadcrumb-separator {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .light .breadcrumb .breadcrumb-current {
+            color: #ffffff;
+        }
+
+        .light .breadcrumb a {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .light .breadcrumb a:hover {
+            color: #ffffff;
+        }
+
+        /* Light mode: Header icons on blue background */
+        .light .bg-k8s-blue .text-white {
+            color: #ffffff !important;
+        }
+
+        .light .bg-k8s-blue .text-slate-300 {
+            color: rgba(255, 255, 255, 0.8) !important;
+        }
+
+        .light .bg-k8s-blue svg {
+            color: #ffffff !important;
+        }
+
+        /* Light mode: Card labels in overview */
+        .light .bg-slate-800 .text-sm {
+            color: #1e293b !important;
+        }
+
     </style>
 </head>
 
@@ -428,6 +481,26 @@
                     <path d="M16 6l-8 4v8l8 4 8-4v-8l-8-4z" fill="#fff" />
                 </svg>
                 <span class="text-lg font-bold text-white">kubernetes</span>
+            </div>
+
+            <!-- Cluster Selector -->
+            <div class="p-3 border-b border-slate-700">
+                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-server text-k8s-blue"></i>
+                        <span>Cluster</span>
+                    </div>
+                    <button onclick="openImportModal()" class="text-k8s-blue hover:text-blue-400 transition-colors" title="Import Kubeconfig">
+                        <i class="fas fa-plus-circle"></i>
+                    </button>
+                </div>
+                <select id="cluster-select" onchange="changeCluster(this.value)"
+                    class="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-k8s-blue">
+                    <option value="">Loading clusters...</option>
+                </select>
+                <div id="cluster-indicator" class="mt-2 text-xs text-slate-400">
+                    <span id="cluster-count">0</span> clusters connected
+                </div>
             </div>
 
             <!-- Namespace Selector -->
@@ -492,11 +565,6 @@
                                 class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
                                 <i class="fas fa-clone w-4 text-center text-slate-400"></i>
                                 <span>Replica Sets</span>
-                            </button></li>
-                        <li><button onclick="navigate('replicationcontrollers')" data-nav="replicationcontrollers"
-                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
-                                <i class="fas fa-copy w-4 text-center text-slate-400"></i>
-                                <span>Replication Controllers</span>
                             </button></li>
                         <li><button onclick="navigate('statefulsets')" data-nav="statefulsets"
                                 class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
@@ -638,11 +706,6 @@
                     </nav>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <div class="relative">
-                        <input type="text" placeholder="Search"
-                            class="bg-k8s-darkblue border-none rounded px-4 py-1.5 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-white/30 w-64">
-                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                    </div>
                     <button onclick="toggleTheme()" id="theme-toggle" class="p-2 hover:bg-k8s-darkblue rounded" title="Toggle Theme">
                         <i id="theme-icon" class="fas fa-sun"></i>
                     </button>
@@ -679,13 +742,282 @@
         let currentView = 'overview';
         let eventSource = null;
         let refreshInterval = null;
+        let currentCluster = '';
+
+        // Helper to get cluster-specific API base
+        function getClusterAPI() {
+            if (!currentCluster) {
+                return `${API_BASE}/api`;  // Fallback to legacy
+            }
+            return `${API_BASE}/api/clusters/${encodeURIComponent(currentCluster)}`;
+        }
+
+        // Helper to fetch API with proper error handling
+        async function fetchAPI(url) {
+            const res = await fetch(url);
+            const data = await res.json();
+            if (!res.ok || data.error) {
+                throw new Error(data.error || data.message || `HTTP ${res.status}`);
+            }
+            return data;
+        }
 
         // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            loadNamespaces();
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadClusters();
+            await loadNamespaces();
             navigate('overview');
             // Auto-refresh disabled - use manual refresh button instead
         });
+
+        // Cluster Management Functions
+        async function loadClusters() {
+            try {
+                const data = await fetch(`${API_BASE}/api/clusters`).then(r => r.json());
+                const select = document.getElementById('cluster-select');
+                const clusters = data.clusters || [];
+
+                select.innerHTML = clusters.length === 0
+                    ? '<option value="">No clusters connected</option>'
+                    : clusters.map(c => `<option value="${c.name}">${c.name} (${c.status})</option>`).join('');
+
+                document.getElementById('cluster-count').textContent = clusters.length;
+
+                if (clusters.length > 0 && !currentCluster) {
+                    currentCluster = clusters[0].name;
+                    select.value = currentCluster;
+                }
+            } catch (err) {
+                console.error('Failed to load clusters:', err);
+                document.getElementById('cluster-select').innerHTML = '<option value="">Error loading clusters</option>';
+            }
+        }
+
+        async function changeCluster(clusterName) {
+            currentCluster = clusterName;
+            await loadNamespaces();
+            navigate(currentView);
+        }
+
+        let kubeconfigContent = null;
+
+        function openImportModal() {
+            document.getElementById('import-modal').classList.remove('hidden');
+            document.getElementById('import-modal').classList.add('flex');
+            clearFileSelection();
+            document.getElementById('preview-section').classList.add('hidden');
+            document.getElementById('import-result').classList.add('hidden');
+            document.getElementById('preview-btn').classList.remove('hidden');
+            document.getElementById('preview-btn').disabled = true;
+            document.getElementById('import-btn').classList.add('hidden');
+            document.getElementById('cancel-btn').classList.remove('hidden');
+            document.getElementById('done-btn').classList.add('hidden');
+            setupDragAndDrop();
+        }
+
+        function closeImportModal() {
+            document.getElementById('import-modal').classList.add('hidden');
+            document.getElementById('import-modal').classList.remove('flex');
+            kubeconfigContent = null;
+        }
+
+        function setupDragAndDrop() {
+            const dropZone = document.getElementById('drop-zone');
+            const dropLabel = document.getElementById('drop-label');
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropLabel.classList.add('border-k8s-blue', 'bg-slate-600/50');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropLabel.classList.remove('border-k8s-blue', 'bg-slate-600/50');
+                }, false);
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFile(files[0]);
+                }
+            }, false);
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                kubeconfigContent = e.target.result;
+                document.getElementById('file-name').textContent = file.name;
+                document.getElementById('file-info').classList.remove('hidden');
+                document.getElementById('drop-label').classList.add('hidden');
+                document.getElementById('preview-btn').disabled = false;
+                document.getElementById('preview-section').classList.add('hidden');
+                document.getElementById('import-result').classList.add('hidden');
+                document.getElementById('preview-btn').classList.remove('hidden');
+                document.getElementById('import-btn').classList.add('hidden');
+            };
+            reader.readAsText(file);
+        }
+
+        function clearFileSelection() {
+            kubeconfigContent = null;
+            document.getElementById('kubeconfig-file').value = '';
+            document.getElementById('file-info').classList.add('hidden');
+            document.getElementById('drop-label').classList.remove('hidden');
+            document.getElementById('preview-btn').disabled = true;
+        }
+
+        async function previewKubeconfig() {
+            if (!kubeconfigContent) {
+                alert('Please select a kubeconfig file');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/kubeconfig/upload/preview`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: kubeconfigContent })
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    document.getElementById('import-result').innerHTML = `<span class="text-red-400">${data.error}</span>`;
+                    document.getElementById('import-result').classList.remove('hidden');
+                    return;
+                }
+
+                const contexts = data.contexts || [];
+                // Store context mappings for import
+                window.kubeconfigContexts = contexts.filter(ctx => !ctx.imported).map(ctx => ({
+                    original: ctx.name,
+                    customName: ctx.name
+                }));
+
+                document.getElementById('contexts-list').innerHTML = contexts.map((ctx, idx) => `
+                    <div class="px-3 py-2 border-b border-slate-700 last:border-0">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs text-slate-400">Context: ${ctx.name}</span>
+                            ${ctx.imported
+                                ? '<span class="text-xs text-green-400"><i class="fas fa-check mr-1"></i>Already imported</span>'
+                                : '<span class="text-xs text-k8s-blue">New</span>'}
+                        </div>
+                        ${!ctx.imported ? `
+                            <input type="text"
+                                id="cluster-name-${idx}"
+                                value="${ctx.name}"
+                                onchange="updateClusterName(${idx}, this.value)"
+                                class="w-full px-2 py-1 bg-slate-800 border border-slate-600 rounded text-sm text-white focus:border-k8s-blue focus:outline-none"
+                                placeholder="Enter cluster name">
+                        ` : ''}
+                    </div>
+                `).join('');
+
+                document.getElementById('preview-section').classList.remove('hidden');
+                document.getElementById('import-result').classList.add('hidden');
+                document.getElementById('preview-btn').classList.add('hidden');
+                document.getElementById('import-btn').classList.remove('hidden');
+            } catch (err) {
+                document.getElementById('import-result').innerHTML = `<span class="text-red-400">Error: ${err.message}</span>`;
+                document.getElementById('import-result').classList.remove('hidden');
+            }
+        }
+
+        function updateClusterName(idx, name) {
+            if (window.kubeconfigContexts && window.kubeconfigContexts[idx]) {
+                window.kubeconfigContexts[idx].customName = name;
+            }
+        }
+
+        async function importKubeconfig() {
+            if (!kubeconfigContent) return;
+
+            // Build name mappings from custom names
+            const nameMapping = {};
+            if (window.kubeconfigContexts) {
+                window.kubeconfigContexts.forEach(ctx => {
+                    if (ctx.customName && ctx.customName !== ctx.original) {
+                        nameMapping[ctx.original] = ctx.customName;
+                    }
+                });
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/kubeconfig/upload`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        content: kubeconfigContent,
+                        nameMapping: nameMapping
+                    })
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    document.getElementById('import-result').innerHTML = `<span class="text-red-400">${data.error}</span>`;
+                    document.getElementById('import-result').classList.remove('hidden', 'bg-green-900/30');
+                    document.getElementById('import-result').classList.add('bg-red-900/30');
+                    return;
+                }
+
+                const added = data.addedClusters || [];
+                const failed = data.failedClusters || [];
+
+                let msg = '';
+                if (added.length > 0) {
+                    msg += `<span class="text-green-400"><i class="fas fa-check mr-1"></i>Added: ${added.join(', ')}</span>`;
+                }
+                if (failed.length > 0) {
+                    msg += `<br><span class="text-red-400"><i class="fas fa-times mr-1"></i>Failed: ${failed.join(', ')}</span>`;
+                }
+                if (added.length === 0 && failed.length === 0) {
+                    msg = '<span class="text-yellow-400">No new clusters to import</span>';
+                }
+
+                document.getElementById('import-result').innerHTML = msg;
+                document.getElementById('import-result').classList.remove('hidden', 'bg-red-900/30');
+                document.getElementById('import-result').classList.add('bg-green-900/30');
+                document.getElementById('import-btn').classList.add('hidden');
+
+                // Show Done button, hide Cancel after successful import
+                if (added.length > 0) {
+                    document.getElementById('cancel-btn').classList.add('hidden');
+                    document.getElementById('preview-btn').classList.add('hidden');
+                    document.getElementById('done-btn').classList.remove('hidden');
+
+                    // Set the newly added cluster as current and refresh
+                    currentCluster = added[0];
+                }
+
+                // Refresh clusters list and namespaces
+                await loadClusters();
+                if (currentCluster) {
+                    document.getElementById('cluster-select').value = currentCluster;
+                    await loadNamespaces();
+                }
+            } catch (err) {
+                document.getElementById('import-result').innerHTML = `<span class="text-red-400">Error: ${err.message}</span>`;
+                document.getElementById('import-result').classList.remove('hidden');
+            }
+        }
 
         // Resource category mapping for breadcrumb
         const resourceCategories = {
@@ -695,7 +1027,6 @@
             'daemonsets': { category: 'Workloads', name: 'Daemon Sets' },
             'statefulsets': { category: 'Workloads', name: 'Stateful Sets' },
             'replicasets': { category: 'Workloads', name: 'Replica Sets' },
-            'replicationcontrollers': { category: 'Workloads', name: 'Replication Controllers' },
             'jobs': { category: 'Workloads', name: 'Jobs' },
             'cronjobs': { category: 'Workloads', name: 'Cron Jobs' },
             'services': { category: 'Service', name: 'Services' },
@@ -756,7 +1087,6 @@
                 case 'daemonsets': renderDaemonSets(); break;
                 case 'statefulsets': renderStatefulSets(); break;
                 case 'replicasets': renderReplicaSets(); break;
-                case 'replicationcontrollers': renderReplicationControllers(); break;
                 case 'jobs': renderJobs(); break;
                 case 'cronjobs': renderCronJobs(); break;
                 case 'services': renderServices(); break;
@@ -799,7 +1129,6 @@
                 'daemonsets': 'Daemon Sets',
                 'statefulsets': 'Stateful Sets',
                 'replicasets': 'Replica Sets',
-                'replicationcontrollers': 'Replication Controllers',
                 'jobs': 'Jobs',
                 'cronjobs': 'Cron Jobs',
                 'services': 'Services',
@@ -827,8 +1156,12 @@
 
         // Namespace handling
         async function loadNamespaces(retryCount = 0) {
+            if (!currentCluster) {
+                console.log('No cluster selected, skipping namespace load');
+                return;
+            }
             try {
-                const res = await fetch(`${API_BASE}/api/namespaces`);
+                const res = await fetch(`${getClusterAPI()}/namespaces`);
                 if (!res.ok) {
                     throw new Error(`HTTP ${res.status}`);
                 }
@@ -878,9 +1211,21 @@
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
 
             try {
+                if (!currentCluster) {
+                    content.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-64 text-slate-400">
+                            <i class="fas fa-cloud-upload-alt text-6xl mb-4"></i>
+                            <p class="text-lg mb-2">No cluster connected</p>
+                            <p class="text-sm mb-4">Import a kubeconfig to get started</p>
+                            <button onclick="openImportModal()" class="px-4 py-2 bg-k8s-blue hover:bg-blue-600 text-white rounded transition-colors">
+                                <i class="fas fa-plus mr-2"></i>Import Kubeconfig
+                            </button>
+                        </div>`;
+                    return;
+                }
                 const [overview, nodeMetrics] = await Promise.all([
-                    fetch(`${API_BASE}/api/overview`).then(r => r.json()),
-                    fetch(`${API_BASE}/api/metrics/nodes`).then(r => r.json()).catch(() => ({ items: [] }))
+                    fetch(`${getClusterAPI()}/overview`).then(r => r.json()),
+                    fetch(`${getClusterAPI()}/metrics/nodes`).then(r => r.json()).catch(() => ({ items: [] }))
                 ]);
 
                 const cpuUsage = nodeMetrics.items?.reduce((a, n) => a + (n.cpuPercent || 0), 0) / (nodeMetrics.items?.length || 1);
@@ -1041,9 +1386,20 @@
         // Safely get items from API response
         function getItems(data) {
             if (!data) return [];
-            if (Array.isArray(data.items)) return data.items;
-            if (Array.isArray(data)) return data;
-            return [];
+            let items = [];
+            if (Array.isArray(data.items)) items = data.items;
+            else if (Array.isArray(data)) items = data;
+            else return [];
+
+            // Sort by namespace, then by name
+            return items.sort((a, b) => {
+                const nsA = (a.namespace || '').toLowerCase();
+                const nsB = (b.namespace || '').toLowerCase();
+                if (nsA !== nsB) return nsA.localeCompare(nsB);
+                const nameA = (a.name || '').toLowerCase();
+                const nameB = (b.name || '').toLowerCase();
+                return nameA.localeCompare(nameB);
+            });
         }
 
         function statusClass(status) {
@@ -1068,7 +1424,7 @@
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
 
             try {
-                const data = await fetch(`${API_BASE}/api/nodes`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/nodes`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Nodes</h1>
@@ -1094,7 +1450,7 @@
 
         async function showNodeDetail(name) {
             try {
-                const data = await fetch(`${API_BASE}/api/nodes/${name}`).then(r => r.json());
+                const data = await fetchAPI(`${getClusterAPI()}/nodes/${name}`);
                 document.getElementById('modal-title').textContent = `Node: ${name}`;
                 document.getElementById('modal-content').innerHTML = `
                     <div class="space-y-4">
@@ -1223,7 +1579,7 @@
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
 
             try {
-                const data = await fetch(`${API_BASE}/api/pods${getNamespaceParam()}`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/pods${getNamespaceParam()}`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Pods</h1>
@@ -1257,7 +1613,7 @@
 
         async function showPodDetail(namespace, name) {
             try {
-                const data = await fetch(`${API_BASE}/api/pods/${namespace}/${name}`).then(r => r.json());
+                const data = await fetchAPI(`${getClusterAPI()}/pods/${namespace}/${name}`);
                 document.getElementById('modal-title').textContent = `Pod: ${namespace}/${name}`;
                 document.getElementById('modal-content').innerHTML = `
                     <div class="space-y-4">
@@ -1379,7 +1735,7 @@
         async function deletePod(namespace, name) {
             if (!confirm(`Delete pod "${name}" in namespace "${namespace}"?`)) return;
             try {
-                await fetch(`${API_BASE}/api/pods/${namespace}/${name}`, { method: 'DELETE' });
+                await fetch(`${getClusterAPI()}/pods/${namespace}/${name}`, { method: 'DELETE' });
                 refreshCurrentView();
             } catch (err) {
                 alert('Error: ' + err.message);
@@ -1396,7 +1752,7 @@
                 return;
             }
             try {
-                await fetch(`${API_BASE}/api/deployments/${namespace}/${name}/scale`, {
+                await fetch(`${getClusterAPI()}/deployments/${namespace}/${name}/scale`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ replicas: num })
@@ -1410,7 +1766,7 @@
         async function restartDeployment(namespace, name) {
             if (!confirm(`Restart deployment "${name}" in namespace "${namespace}"?`)) return;
             try {
-                await fetch(`${API_BASE}/api/deployments/${namespace}/${name}/restart`, { method: 'POST' });
+                await fetch(`${getClusterAPI()}/deployments/${namespace}/${name}/restart`, { method: 'POST' });
                 refreshCurrentView();
             } catch (err) {
                 alert('Error: ' + err.message);
@@ -1420,7 +1776,7 @@
         async function deleteDeployment(namespace, name) {
             if (!confirm(`Delete deployment "${name}" in namespace "${namespace}"? This will also delete all pods managed by this deployment.`)) return;
             try {
-                await fetch(`${API_BASE}/api/deployments/${namespace}/${name}`, { method: 'DELETE' });
+                await fetch(`${getClusterAPI()}/deployments/${namespace}/${name}`, { method: 'DELETE' });
                 refreshCurrentView();
             } catch (err) {
                 alert('Error: ' + err.message);
@@ -1437,7 +1793,7 @@
                 return;
             }
             try {
-                await fetch(`${API_BASE}/api/statefulsets/${namespace}/${name}/scale`, {
+                await fetch(`${getClusterAPI()}/statefulsets/${namespace}/${name}/scale`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ replicas: num })
@@ -1451,7 +1807,7 @@
         async function deleteStatefulSet(namespace, name) {
             if (!confirm(`Delete statefulset "${name}" in namespace "${namespace}"? This will also delete all pods managed by this statefulset.`)) return;
             try {
-                await fetch(`${API_BASE}/api/statefulsets/${namespace}/${name}`, { method: 'DELETE' });
+                await fetch(`${getClusterAPI()}/statefulsets/${namespace}/${name}`, { method: 'DELETE' });
                 refreshCurrentView();
             } catch (err) {
                 alert('Error: ' + err.message);
@@ -1461,7 +1817,7 @@
         // Edit functions
         async function editPod(namespace, name) {
             try {
-                const data = await fetch(`${API_BASE}/api/pods/${namespace}/${name}`).then(r => r.json());
+                const data = await fetchAPI(`${getClusterAPI()}/pods/${namespace}/${name}`);
                 const labels = data.metadata?.labels || {};
                 const annotations = data.metadata?.annotations || {};
 
@@ -1494,7 +1850,7 @@
                 const labels = JSON.parse(document.getElementById('edit-pod-labels').value);
                 const annotations = JSON.parse(document.getElementById('edit-pod-annotations').value);
 
-                await fetch(`${API_BASE}/api/pods/${namespace}/${name}`, {
+                await fetch(`${getClusterAPI()}/pods/${namespace}/${name}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ labels, annotations })
@@ -1508,7 +1864,7 @@
 
         async function editDeployment(namespace, name) {
             try {
-                const data = await fetch(`${API_BASE}/api/deployments/${namespace}/${name}`).then(r => r.json());
+                const data = await fetchAPI(`${getClusterAPI()}/deployments/${namespace}/${name}`);
                 const replicas = data.spec?.replicas || 1;
                 const image = data.spec?.template?.spec?.containers?.[0]?.image || '';
                 const labels = data.metadata?.labels || {};
@@ -1554,7 +1910,7 @@
                 const labels = JSON.parse(document.getElementById('edit-deploy-labels').value);
                 const annotations = JSON.parse(document.getElementById('edit-deploy-annotations').value);
 
-                await fetch(`${API_BASE}/api/deployments/${namespace}/${name}`, {
+                await fetch(`${getClusterAPI()}/deployments/${namespace}/${name}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ replicas, image, labels, annotations })
@@ -1568,7 +1924,7 @@
 
         async function editStatefulSet(namespace, name) {
             try {
-                const data = await fetch(`${API_BASE}/api/statefulsets/${namespace}/${name}`).then(r => r.json());
+                const data = await fetchAPI(`${getClusterAPI()}/statefulsets/${namespace}/${name}`);
                 const replicas = data.spec?.replicas || 1;
                 const image = data.spec?.template?.spec?.containers?.[0]?.image || '';
                 const labels = data.metadata?.labels || {};
@@ -1614,7 +1970,7 @@
                 const labels = JSON.parse(document.getElementById('edit-sts-labels').value);
                 const annotations = JSON.parse(document.getElementById('edit-sts-annotations').value);
 
-                await fetch(`${API_BASE}/api/statefulsets/${namespace}/${name}`, {
+                await fetch(`${getClusterAPI()}/statefulsets/${namespace}/${name}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ replicas, image, labels, annotations })
@@ -1672,7 +2028,7 @@
             const logOutput = document.getElementById('log-output');
             logOutput.innerHTML = '<p class="text-slate-500">Connecting...</p>';
 
-            eventSource = new EventSource(`${API_BASE}/api/logs/${namespace}/${pod}`);
+            eventSource = new EventSource(`${getClusterAPI()}/logs/${namespace}/${pod}`);
             eventSource.addEventListener('log', (e) => {
                 if (logOutput.querySelector('.text-slate-500')) logOutput.innerHTML = '';
                 const line = document.createElement('div');
@@ -1711,7 +2067,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/deployments${getNamespaceParam()}`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/deployments${getNamespaceParam()}`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Deployments</h1>
@@ -1748,7 +2104,7 @@
 
         async function showDeploymentDetail(namespace, name) {
             try {
-                const data = await fetch(`${API_BASE}/api/deployments/${namespace}/${name}`).then(r => r.json());
+                const data = await fetchAPI(`${getClusterAPI()}/deployments/${namespace}/${name}`);
                 document.getElementById('modal-title').textContent = `Deployment: ${namespace}/${name}`;
 
                 const spec = data.spec || {};
@@ -1849,7 +2205,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/daemonsets${getNamespaceParam()}`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/daemonsets${getNamespaceParam()}`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Daemon Sets</h1>
@@ -1878,7 +2234,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/statefulsets${getNamespaceParam()}`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/statefulsets${getNamespaceParam()}`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Stateful Sets</h1>
@@ -1913,37 +2269,10 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/replicasets${getNamespaceParam()}`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/replicasets${getNamespaceParam()}`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Replica Sets</h1>
-                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
-                    </div>
-                    <div class="bg-slate-800 rounded-lg border border-slate-700">
-                        ${renderTable([
-                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
-                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
-                    { label: 'Desired', key: 'desired' },
-                    { label: 'Current', key: 'current' },
-                    { label: 'Ready', key: 'ready' },
-                    { label: 'Age', key: 'age', class: 'text-slate-400' }
-                ], getItems(data))}
-                    </div>
-                `;
-            } catch (err) {
-                content.innerHTML = renderErrorState(currentView, err.message);
-            }
-        }
-
-        // ReplicationControllers
-        async function renderReplicationControllers() {
-            const content = document.getElementById('content');
-            content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
-            try {
-                const data = await fetch(`${API_BASE}/api/replicationcontrollers${getNamespaceParam()}`).then(r => r.json());
-                content.innerHTML = `
-                    <div class="flex items-center justify-between mb-4">
-                        <h1 class="text-xl font-bold">Replication Controllers</h1>
                         <span class="text-sm text-slate-400">${getItems(data).length} total</span>
                     </div>
                     <div class="bg-slate-800 rounded-lg border border-slate-700">
@@ -1967,7 +2296,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/jobs${getNamespaceParam()}`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/jobs${getNamespaceParam()}`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Jobs</h1>
@@ -1993,7 +2322,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/cronjobs${getNamespaceParam()}`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/cronjobs${getNamespaceParam()}`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Cron Jobs</h1>
@@ -2021,7 +2350,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/services${getNamespaceParam()}`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/services${getNamespaceParam()}`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Services</h1>
@@ -2049,7 +2378,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/ingresses${getNamespaceParam()}`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/ingresses${getNamespaceParam()}`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Ingresses</h1>
@@ -2076,7 +2405,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/ingressclasses`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/ingressclasses`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Ingress Classes</h1>
@@ -2100,7 +2429,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/configmaps${getNamespaceParam()}`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/configmaps${getNamespaceParam()}`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Config Maps</h1>
@@ -2122,7 +2451,7 @@
 
         async function showConfigMapDetail(namespace, name) {
             try {
-                const data = await fetch(`${API_BASE}/api/configmaps/${namespace}/${name}`).then(r => r.json());
+                const data = await fetchAPI(`${getClusterAPI()}/configmaps/${namespace}/${name}`);
                 document.getElementById('modal-title').textContent = `ConfigMap: ${namespace}/${name}`;
                 document.getElementById('modal-content').innerHTML = `
                     <div class="space-y-4">
@@ -2175,7 +2504,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/secrets${getNamespaceParam()}`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/secrets${getNamespaceParam()}`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Secrets</h1>
@@ -2201,7 +2530,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/persistentvolumeclaims${getNamespaceParam()}`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/persistentvolumeclaims${getNamespaceParam()}`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Persistent Volume Claims</h1>
@@ -2229,7 +2558,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/persistentvolumes`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/persistentvolumes`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Persistent Volumes</h1>
@@ -2257,7 +2586,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/storageclasses`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/storageclasses`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Storage Classes</h1>
@@ -2284,7 +2613,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/clusterroles`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/clusterroles`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Cluster Roles</h1>
@@ -2308,7 +2637,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/clusterrolebindings`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/clusterrolebindings`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Cluster Role Bindings</h1>
@@ -2333,7 +2662,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/namespaces`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/namespaces`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Namespaces</h1>
@@ -2357,7 +2686,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/networkpolicies${getNamespaceParam()}`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/networkpolicies${getNamespaceParam()}`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Network Policies</h1>
@@ -2384,7 +2713,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/serviceaccounts${getNamespaceParam()}`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/serviceaccounts${getNamespaceParam()}`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Service Accounts</h1>
@@ -2409,7 +2738,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/horizontalpodautoscalers${getNamespaceParam()}`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/horizontalpodautoscalers${getNamespaceParam()}`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Horizontal Pod Autoscalers</h1>
@@ -2438,7 +2767,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/roles${getNamespaceParam()}`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/roles${getNamespaceParam()}`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Roles</h1>
@@ -2463,7 +2792,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/rolebindings${getNamespaceParam()}`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/rolebindings${getNamespaceParam()}`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Role Bindings</h1>
@@ -2489,7 +2818,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="flex items-center justify-center h-64"><i class="fas fa-spinner fa-spin text-4xl text-k8s-blue"></i></div>';
             try {
-                const data = await fetch(`${API_BASE}/api/events${getNamespaceParam()}`).then(r => r.json());
+                const data = await fetch(`${getClusterAPI()}/events${getNamespaceParam()}`).then(r => r.json());
                 content.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <h1 class="text-xl font-bold">Events</h1>
@@ -2514,14 +2843,14 @@
         // Generic resource detail viewer
         async function showResourceDetail(resourceType, namespace, name) {
             try {
-                let url = `${API_BASE}/api/${resourceType}`;
+                let url = `${getClusterAPI()}/${resourceType}`;
                 if (namespace) {
                     url += `/${namespace}/${name}`;
                 } else {
                     url += `/${name}`;
                 }
 
-                const data = await fetch(url).then(r => r.json());
+                const data = await fetchAPI(url);
 
                 // Update breadcrumb to show detail view
                 updateBreadcrumb(resourceType, name);
@@ -2694,6 +3023,64 @@
             }
         })();
     </script>
+
+    <!-- Import Kubeconfig Modal -->
+    <div id="import-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center">
+        <div class="bg-slate-800 rounded-lg border border-slate-700 w-full max-w-lg mx-4 shadow-2xl">
+            <div class="flex items-center justify-between p-4 border-b border-slate-700">
+                <h2 class="text-lg font-semibold text-white">Import Kubeconfig</h2>
+                <button onclick="closeImportModal()" class="text-slate-400 hover:text-white transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-4">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Upload Kubeconfig File</label>
+                    <div id="drop-zone" class="relative">
+                        <input type="file" id="kubeconfig-file" accept=".yaml,.yml,.conf,*" onchange="handleFileSelect(event)"
+                            class="hidden">
+                        <label for="kubeconfig-file" id="drop-label"
+                            class="flex items-center justify-center gap-2 w-full bg-slate-700 border-2 border-dashed border-slate-500 rounded-lg px-4 py-6 cursor-pointer hover:border-k8s-blue hover:bg-slate-600/50 transition-colors">
+                            <i class="fas fa-cloud-upload-alt text-2xl text-slate-400"></i>
+                            <div class="text-center">
+                                <p class="text-sm text-slate-300">Click to select kubeconfig file</p>
+                                <p class="text-xs text-slate-400 mt-1">or drag and drop here</p>
+                            </div>
+                        </label>
+                    </div>
+                    <div id="file-info" class="hidden mt-2 p-2 bg-slate-700 rounded flex items-center justify-between">
+                        <span class="text-sm text-slate-300"><i class="fas fa-file-code mr-2 text-k8s-blue"></i><span id="file-name"></span></span>
+                        <button onclick="clearFileSelection()" class="text-slate-400 hover:text-red-400">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="preview-section" class="hidden mb-4">
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Available Contexts</label>
+                    <div id="contexts-list" class="bg-slate-900 rounded border border-slate-600 max-h-48 overflow-y-auto">
+                        <!-- Contexts will be listed here -->
+                    </div>
+                </div>
+                <div id="import-result" class="hidden mb-4 p-3 rounded text-sm">
+                    <!-- Import result message -->
+                </div>
+            </div>
+            <div class="flex items-center justify-end gap-3 p-4 border-t border-slate-700">
+                <button id="cancel-btn" onclick="closeImportModal()" class="px-4 py-2 text-sm text-slate-300 hover:text-white transition-colors">
+                    Cancel
+                </button>
+                <button id="preview-btn" onclick="previewKubeconfig()" disabled class="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white text-sm rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    Preview
+                </button>
+                <button id="import-btn" onclick="importKubeconfig()" class="px-4 py-2 bg-k8s-blue hover:bg-blue-600 text-white text-sm rounded transition-colors hidden">
+                    Import
+                </button>
+                <button id="done-btn" onclick="closeImportModal()" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm rounded transition-colors hidden">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

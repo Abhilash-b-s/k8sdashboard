@@ -78,6 +78,9 @@ type HPAInfo struct {
 
 // GetEvents returns list of events
 func GetEvents(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaceFilter := c.Query("namespace")
 	events, err := k8s.InformerFactory.Core().V1().Events().Lister().List(labels.Everything())
 	if err != nil {
@@ -123,6 +126,9 @@ func GetEvents(c *gin.Context) {
 
 // GetNetworkPolicies returns list of network policies
 func GetNetworkPolicies(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaceFilter := c.Query("namespace")
 	policies, err := k8s.InformerFactory.Networking().V1().NetworkPolicies().Lister().List(labels.Everything())
 	if err != nil {
@@ -161,6 +167,9 @@ func GetNetworkPolicies(c *gin.Context) {
 
 // GetRoles returns list of roles
 func GetRoles(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaceFilter := c.Query("namespace")
 	roles, err := k8s.InformerFactory.Rbac().V1().Roles().Lister().List(labels.Everything())
 	if err != nil {
@@ -186,6 +195,9 @@ func GetRoles(c *gin.Context) {
 
 // GetRoleBindings returns list of role bindings
 func GetRoleBindings(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaceFilter := c.Query("namespace")
 	bindings, err := k8s.InformerFactory.Rbac().V1().RoleBindings().Lister().List(labels.Everything())
 	if err != nil {
@@ -212,6 +224,9 @@ func GetRoleBindings(c *gin.Context) {
 
 // GetServiceAccounts returns list of service accounts
 func GetServiceAccounts(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaceFilter := c.Query("namespace")
 	sas, err := k8s.InformerFactory.Core().V1().ServiceAccounts().Lister().List(labels.Everything())
 	if err != nil {
@@ -237,6 +252,9 @@ func GetServiceAccounts(c *gin.Context) {
 
 // GetHPAs returns list of horizontal pod autoscalers
 func GetHPAs(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaceFilter := c.Query("namespace")
 	hpas, err := k8s.InformerFactory.Autoscaling().V2().HorizontalPodAutoscalers().Lister().List(labels.Everything())
 	if err != nil {

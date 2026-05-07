@@ -14,6 +14,9 @@ import (
 
 // StreamLogs streams pod logs using Server-Sent Events
 func StreamLogs(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	podName := c.Param("pod")
 	container := c.Query("container")

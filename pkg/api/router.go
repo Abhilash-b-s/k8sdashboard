@@ -5,8 +5,6 @@ import (
 
 	"github.com/gin-gonic/contrib/static"
 	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // SetupRouter initializes the Gin router and defines routes
@@ -19,14 +17,160 @@ func SetupRouter() *gin.Engine {
 	router.Use(static.Serve("/", static.LocalFile("./static", true)))
 	router.Static("/static", "./static")
 
-	// Swagger documentation
-	router.GET("/api/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// Health endpoints for Kubernetes probes
+	router.GET("/healthz", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
+	router.GET("/readyz", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
 
 	// API routes
 	api := router.Group("/api")
 	{
 		// API Info endpoint
 		api.GET("", handlers.GetAPIInfo)
+
+		// ============================================
+		// MULTI-CLUSTER ENDPOINTS
+		// ============================================
+
+		// List all clusters
+		api.GET("/clusters", handlers.ListClusters)
+
+		// Import clusters from a new kubeconfig (server path)
+		api.POST("/clusters/import", handlers.ImportClustersFromKubeconfig)
+
+		// Preview contexts in a kubeconfig file (server path)
+		api.POST("/kubeconfig/preview", handlers.PreviewKubeconfig)
+
+		// Upload kubeconfig from client
+		api.POST("/kubeconfig/upload", handlers.UploadKubeconfig)
+		api.POST("/kubeconfig/upload/preview", handlers.PreviewUploadedKubeconfig)
+
+		// Stored kubeconfigs management
+		api.GET("/kubeconfigs", handlers.ListStoredKubeconfigs)
+		api.DELETE("/kubeconfigs/:name", handlers.DeleteStoredKubeconfig)
+
+		// Remove a cluster (must be before :cluster routes)
+		api.DELETE("/clusters/:cluster", handlers.RemoveCluster)
+
+		// Per-cluster routes (with cluster middleware)
+		cluster := api.Group("/clusters/:cluster")
+		cluster.Use(handlers.ClusterMiddleware())
+		{
+			// Cluster info
+			cluster.GET("", handlers.GetClusterInfo)
+
+			// Cluster Overview
+			cluster.GET("/overview", handlers.GetClusterOverview)
+			cluster.GET("/namespaces", handlers.GetClusterNamespaces)
+			cluster.GET("/namespaces/:name", handlers.GetClusterNamespaceDetail)
+			cluster.GET("/nodes", handlers.GetClusterNodes)
+			cluster.GET("/nodes/:name", handlers.GetClusterNode)
+
+			// Workloads - Pods
+			cluster.GET("/pods", handlers.GetClusterPods)
+			cluster.GET("/pods/:namespace/:name", handlers.GetClusterPodDetail)
+			cluster.PUT("/pods/:namespace/:name", handlers.UpdateClusterPod)
+			cluster.DELETE("/pods/:namespace/:name", handlers.DeleteClusterPod)
+
+			// Workloads - Deployments
+			cluster.GET("/deployments", handlers.GetClusterDeployments)
+			cluster.GET("/deployments/:namespace/:name", handlers.GetClusterDeploymentDetail)
+			cluster.PUT("/deployments/:namespace/:name", handlers.UpdateClusterDeployment)
+			cluster.DELETE("/deployments/:namespace/:name", handlers.DeleteClusterDeployment)
+			cluster.PUT("/deployments/:namespace/:name/scale", handlers.ScaleClusterDeployment)
+			cluster.POST("/deployments/:namespace/:name/restart", handlers.RestartClusterDeployment)
+
+			// Workloads - DaemonSets
+			cluster.GET("/daemonsets", handlers.GetClusterDaemonSets)
+			cluster.GET("/daemonsets/:namespace/:name", handlers.GetClusterDaemonSetDetail)
+
+			// Workloads - StatefulSets
+			cluster.GET("/statefulsets", handlers.GetClusterStatefulSets)
+			cluster.GET("/statefulsets/:namespace/:name", handlers.GetClusterStatefulSetDetail)
+			cluster.PUT("/statefulsets/:namespace/:name", handlers.UpdateClusterStatefulSet)
+			cluster.DELETE("/statefulsets/:namespace/:name", handlers.DeleteClusterStatefulSet)
+			cluster.PUT("/statefulsets/:namespace/:name/scale", handlers.ScaleClusterStatefulSet)
+
+			// Workloads - ReplicaSets
+			cluster.GET("/replicasets", handlers.GetClusterReplicaSets)
+			cluster.GET("/replicasets/:namespace/:name", handlers.GetClusterReplicaSetDetail)
+
+			// Workloads - Jobs
+			cluster.GET("/jobs", handlers.GetClusterJobs)
+			cluster.GET("/jobs/:namespace/:name", handlers.GetClusterJobDetail)
+
+			// Workloads - CronJobs
+			cluster.GET("/cronjobs", handlers.GetClusterCronJobs)
+			cluster.GET("/cronjobs/:namespace/:name", handlers.GetClusterCronJobDetail)
+
+			// Service - Services
+			cluster.GET("/services", handlers.GetClusterServices)
+			cluster.GET("/services/:namespace/:name", handlers.GetClusterServiceDetail)
+
+			// Service - Ingresses
+			cluster.GET("/ingresses", handlers.GetClusterIngresses)
+			cluster.GET("/ingresses/:namespace/:name", handlers.GetClusterIngressDetail)
+			cluster.GET("/ingressclasses", handlers.GetClusterIngressClasses)
+
+			// Service - Network Policies
+			cluster.GET("/networkpolicies", handlers.GetClusterNetworkPolicies)
+			cluster.GET("/networkpolicies/:namespace/:name", handlers.GetClusterNetworkPolicyDetail)
+
+			// Config and Storage - ConfigMaps
+			cluster.GET("/configmaps", handlers.GetClusterConfigMaps)
+			cluster.GET("/configmaps/:namespace/:name", handlers.GetClusterConfigMapDetail)
+
+			// Config and Storage - Secrets
+			cluster.GET("/secrets", handlers.GetClusterSecrets)
+			cluster.GET("/secrets/:namespace/:name", handlers.GetClusterSecretDetail)
+
+			// Config and Storage - PVs, PVCs, StorageClasses
+			cluster.GET("/persistentvolumes", handlers.GetClusterPersistentVolumes)
+			cluster.GET("/persistentvolumes/:name", handlers.GetClusterPVDetail)
+			cluster.GET("/persistentvolumeclaims", handlers.GetClusterPersistentVolumeClaims)
+			cluster.GET("/persistentvolumeclaims/:namespace/:name", handlers.GetClusterPVCDetail)
+			cluster.GET("/storageclasses", handlers.GetClusterStorageClasses)
+			cluster.GET("/storageclasses/:name", handlers.GetClusterStorageClassDetail)
+
+			// RBAC - Cluster level
+			cluster.GET("/clusterroles", handlers.GetClusterClusterRoles)
+			cluster.GET("/clusterroles/:name", handlers.GetClusterClusterRoleDetailView)
+			cluster.GET("/clusterrolebindings", handlers.GetClusterClusterRoleBindings)
+			cluster.GET("/clusterrolebindings/:name", handlers.GetClusterClusterRoleBindingDetailView)
+
+			// RBAC - Namespace level
+			cluster.GET("/roles", handlers.GetClusterRolesView)
+			cluster.GET("/roles/:namespace/:name", handlers.GetClusterRoleDetailView)
+			cluster.GET("/rolebindings", handlers.GetClusterRoleBindingsView)
+			cluster.GET("/rolebindings/:namespace/:name", handlers.GetClusterRoleBindingDetailView)
+
+			// Service Accounts
+			cluster.GET("/serviceaccounts", handlers.GetClusterServiceAccounts)
+			cluster.GET("/serviceaccounts/:namespace/:name", handlers.GetClusterServiceAccountDetail)
+
+			// Autoscaling - HPAs
+			cluster.GET("/horizontalpodautoscalers", handlers.GetClusterHPAs)
+			cluster.GET("/horizontalpodautoscalers/:namespace/:name", handlers.GetClusterHPADetail)
+
+			// Events
+			cluster.GET("/events", handlers.GetClusterEvents)
+			cluster.GET("/events/:namespace/:name", handlers.GetClusterEventsForResource)
+
+			// Logs (SSE streaming)
+			cluster.GET("/logs/:namespace/:pod", handlers.StreamClusterLogs)
+
+			// Metrics
+			cluster.GET("/metrics/nodes", handlers.GetClusterNodeMetrics)
+			cluster.GET("/metrics/pods", handlers.GetClusterPodMetrics)
+		}
+
+		// ============================================
+		// LEGACY SINGLE-CLUSTER ENDPOINTS (backward compatibility)
+		// These use the first available cluster
+		// ============================================
 
 		// Cluster Overview
 		api.GET("/overview", handlers.GetOverview)
@@ -63,9 +207,6 @@ func SetupRouter() *gin.Engine {
 		// Workloads - ReplicaSets
 		api.GET("/replicasets", handlers.GetReplicaSets)
 		api.GET("/replicasets/:namespace/:name", handlers.GetReplicaSetDetail)
-
-		// Workloads - ReplicationControllers
-		api.GET("/replicationcontrollers", handlers.GetReplicationControllers)
 
 		// Workloads - Jobs
 		api.GET("/jobs", handlers.GetJobs)
@@ -134,7 +275,6 @@ func SetupRouter() *gin.Engine {
 		// Metrics
 		api.GET("/metrics/nodes", handlers.GetNodeMetrics)
 		api.GET("/metrics/pods", handlers.GetPodMetrics)
-
 	}
 
 	return router

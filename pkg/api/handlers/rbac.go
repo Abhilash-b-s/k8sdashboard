@@ -10,6 +10,9 @@ import (
 
 // GetClusterRoles returns list of cluster roles
 func GetClusterRoles(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	roles, err := k8s.InformerFactory.Rbac().V1().ClusterRoles().Lister().List(labels.Everything())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list cluster roles"})
@@ -29,6 +32,9 @@ func GetClusterRoles(c *gin.Context) {
 
 // GetClusterRoleBindings returns list of cluster role bindings
 func GetClusterRoleBindings(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	bindings, err := k8s.InformerFactory.Rbac().V1().ClusterRoleBindings().Lister().List(labels.Everything())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list cluster role bindings"})

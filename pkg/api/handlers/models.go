@@ -205,15 +205,6 @@ type ReplicaSetInfo struct {
 	Age       string `json:"age"`
 }
 
-type ReplicationControllerInfo struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace"`
-	Desired   int32  `json:"desired"`
-	Current   int32  `json:"current"`
-	Ready     int32  `json:"ready"`
-	Age       string `json:"age"`
-}
-
 type JobInfo struct {
 	Name        string `json:"name"`
 	Namespace   string `json:"namespace"`

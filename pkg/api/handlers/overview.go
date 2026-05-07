@@ -11,6 +11,31 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
+// checkLegacyClientAvailable checks if the single-cluster client is available
+// Returns true if available, false if not (and sends error response)
+func checkLegacyClientAvailable(c *gin.Context) bool {
+	if k8s.InformerFactory != nil && k8s.Clientset != nil {
+		return true
+	}
+
+	// Try multi-cluster mode - use first available cluster
+	if k8s.Manager != nil && k8s.Manager.ClusterCount() > 0 {
+		// Redirect to indicate they should use cluster-specific endpoints
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error":   "Legacy API not available in multi-cluster mode",
+			"message": "Use /api/clusters/{cluster-name}/... endpoints instead",
+			"clusters": k8s.Manager.ListClusters(),
+		})
+		return false
+	}
+
+	c.JSON(http.StatusServiceUnavailable, gin.H{
+		"error":   "No cluster connected",
+		"message": "Please upload a kubeconfig file to connect to a cluster",
+	})
+	return false
+}
+
 // GetAPIInfo returns API information and available endpoints
 func GetAPIInfo(c *gin.Context) {
 	endpoints := gin.H{
@@ -74,6 +99,10 @@ func GetAPIInfo(c *gin.Context) {
 
 // GetOverview returns cluster overview statistics
 func GetOverview(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
+
 	// Use Listers from the shared informer factory
 	nodes, err := k8s.InformerFactory.Core().V1().Nodes().Lister().List(labels.Everything())
 	if err != nil {
@@ -145,6 +174,9 @@ func GetOverview(c *gin.Context) {
 
 // GetNamespaces returns list of all namespaces
 func GetNamespaces(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaces, err := k8s.Clientset.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

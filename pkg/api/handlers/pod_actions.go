@@ -11,6 +11,9 @@ import (
 
 // DeletePod terminates a pod
 func DeletePod(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	podName := c.Param("name")
 
@@ -32,6 +35,9 @@ func DeletePod(c *gin.Context) {
 
 // DeleteDeployment deletes a deployment
 func DeleteDeployment(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -53,6 +59,9 @@ func DeleteDeployment(c *gin.Context) {
 
 // ScaleDeployment scales a deployment to the specified replicas
 func ScaleDeployment(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -85,6 +94,9 @@ func ScaleDeployment(c *gin.Context) {
 
 // RestartDeployment restarts a deployment by updating an annotation
 func RestartDeployment(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -110,6 +122,9 @@ func RestartDeployment(c *gin.Context) {
 
 // DeleteStatefulSet deletes a statefulset
 func DeleteStatefulSet(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -131,6 +146,9 @@ func DeleteStatefulSet(c *gin.Context) {
 
 // ScaleStatefulSet scales a statefulset to the specified replicas
 func ScaleStatefulSet(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -163,6 +181,9 @@ func ScaleStatefulSet(c *gin.Context) {
 
 // UpdateDeployment updates a deployment with the provided spec
 func UpdateDeployment(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -222,6 +243,9 @@ func UpdateDeployment(c *gin.Context) {
 
 // UpdateStatefulSet updates a statefulset with the provided spec
 func UpdateStatefulSet(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -281,6 +305,9 @@ func UpdateStatefulSet(c *gin.Context) {
 
 // UpdatePod updates a pod's labels and annotations (limited updates allowed for pods)
 func UpdatePod(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 

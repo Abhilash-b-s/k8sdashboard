@@ -10,6 +10,9 @@ import (
 
 // GetIngressClasses returns list of ingress classes
 func GetIngressClasses(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	classes, err := k8s.InformerFactory.Networking().V1().IngressClasses().Lister().List(labels.Everything())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list ingress classes"})

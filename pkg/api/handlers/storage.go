@@ -12,6 +12,9 @@ import (
 
 // GetPersistentVolumeClaims returns list of PVCs
 func GetPersistentVolumeClaims(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaceFilter := c.Query("namespace")
 	pvcs, err := k8s.InformerFactory.Core().V1().PersistentVolumeClaims().Lister().List(labels.Everything())
 	if err != nil {
@@ -50,6 +53,9 @@ func GetPersistentVolumeClaims(c *gin.Context) {
 
 // GetPersistentVolumes returns list of PVs
 func GetPersistentVolumes(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	pvs, err := k8s.InformerFactory.Core().V1().PersistentVolumes().Lister().List(labels.Everything())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list pvs"})
@@ -83,6 +89,9 @@ func GetPersistentVolumes(c *gin.Context) {
 
 // GetStorageClasses returns list of storage classes
 func GetStorageClasses(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	scs, err := k8s.InformerFactory.Storage().V1().StorageClasses().Lister().List(labels.Everything())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list storage classes"})

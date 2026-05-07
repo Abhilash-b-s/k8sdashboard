@@ -12,6 +12,9 @@ import (
 
 // GetServices returns list of services
 func GetServices(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaceFilter := c.Query("namespace")
 	services, err := k8s.InformerFactory.Core().V1().Services().Lister().List(labels.Everything())
 	if err != nil {
@@ -44,6 +47,9 @@ func GetServices(c *gin.Context) {
 
 // GetServiceDetail returns service details
 func GetServiceDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	svc, err := k8s.InformerFactory.Core().V1().Services().Lister().Services(namespace).Get(name)
@@ -56,6 +62,9 @@ func GetServiceDetail(c *gin.Context) {
 
 // GetIngresses returns list of ingresses
 func GetIngresses(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaceFilter := c.Query("namespace")
 	ingresses, err := k8s.InformerFactory.Networking().V1().Ingresses().Lister().List(labels.Everything())
 	if err != nil {
@@ -96,6 +105,9 @@ func GetIngresses(c *gin.Context) {
 
 // GetConfigMaps returns list of configmaps
 func GetConfigMaps(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaceFilter := c.Query("namespace")
 	cms, err := k8s.InformerFactory.Core().V1().ConfigMaps().Lister().List(labels.Everything())
 	if err != nil {
@@ -121,6 +133,9 @@ func GetConfigMaps(c *gin.Context) {
 
 // GetConfigMapDetail returns configmap details
 func GetConfigMapDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	cm, err := k8s.InformerFactory.Core().V1().ConfigMaps().Lister().ConfigMaps(namespace).Get(name)
@@ -133,6 +148,9 @@ func GetConfigMapDetail(c *gin.Context) {
 
 // GetSecrets returns list of secrets
 func GetSecrets(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaceFilter := c.Query("namespace")
 	secrets, err := k8s.InformerFactory.Core().V1().Secrets().Lister().List(labels.Everything())
 	if err != nil {
@@ -159,6 +177,9 @@ func GetSecrets(c *gin.Context) {
 
 // GetSecretDetail returns secret details
 func GetSecretDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	secret, err := k8s.InformerFactory.Core().V1().Secrets().Lister().Secrets(namespace).Get(name)

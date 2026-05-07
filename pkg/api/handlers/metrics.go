@@ -12,6 +12,9 @@ import (
 
 // GetNodeMetrics returns node metrics
 func GetNodeMetrics(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	if k8s.MetricsClient == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Metrics server not available"})
 		return

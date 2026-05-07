@@ -116,6 +116,9 @@ type VolumeInfo struct {
 
 // GetPodDetail returns detailed pod information
 func GetPodDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -276,6 +279,9 @@ func GetPodDetail(c *gin.Context) {
 
 // GetDaemonSetDetail returns detailed daemonset information
 func GetDaemonSetDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -289,6 +295,9 @@ func GetDaemonSetDetail(c *gin.Context) {
 
 // GetStatefulSetDetail returns detailed statefulset information
 func GetStatefulSetDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -302,6 +311,9 @@ func GetStatefulSetDetail(c *gin.Context) {
 
 // GetReplicaSetDetail returns detailed replicaset information
 func GetReplicaSetDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -315,6 +327,9 @@ func GetReplicaSetDetail(c *gin.Context) {
 
 // GetJobDetail returns detailed job information
 func GetJobDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -328,6 +343,9 @@ func GetJobDetail(c *gin.Context) {
 
 // GetCronJobDetail returns detailed cronjob information
 func GetCronJobDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -341,6 +359,9 @@ func GetCronJobDetail(c *gin.Context) {
 
 // GetIngressDetail returns detailed ingress information
 func GetIngressDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -354,6 +375,9 @@ func GetIngressDetail(c *gin.Context) {
 
 // GetPVDetail returns detailed persistent volume information
 func GetPVDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	name := c.Param("name")
 
 	pv, err := k8s.InformerFactory.Core().V1().PersistentVolumes().Lister().Get(name)
@@ -366,6 +390,9 @@ func GetPVDetail(c *gin.Context) {
 
 // GetPVCDetail returns detailed persistent volume claim information
 func GetPVCDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -379,6 +406,9 @@ func GetPVCDetail(c *gin.Context) {
 
 // GetStorageClassDetail returns detailed storage class information
 func GetStorageClassDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	name := c.Param("name")
 
 	sc, err := k8s.InformerFactory.Storage().V1().StorageClasses().Lister().Get(name)
@@ -391,6 +421,9 @@ func GetStorageClassDetail(c *gin.Context) {
 
 // GetClusterRoleDetail returns detailed cluster role information
 func GetClusterRoleDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	name := c.Param("name")
 
 	cr, err := k8s.InformerFactory.Rbac().V1().ClusterRoles().Lister().Get(name)
@@ -403,6 +436,9 @@ func GetClusterRoleDetail(c *gin.Context) {
 
 // GetClusterRoleBindingDetail returns detailed cluster role binding information
 func GetClusterRoleBindingDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	name := c.Param("name")
 
 	crb, err := k8s.InformerFactory.Rbac().V1().ClusterRoleBindings().Lister().Get(name)
@@ -415,6 +451,9 @@ func GetClusterRoleBindingDetail(c *gin.Context) {
 
 // GetRoleDetail returns detailed role information
 func GetRoleDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -428,6 +467,9 @@ func GetRoleDetail(c *gin.Context) {
 
 // GetRoleBindingDetail returns detailed role binding information
 func GetRoleBindingDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -441,6 +483,9 @@ func GetRoleBindingDetail(c *gin.Context) {
 
 // GetServiceAccountDetail returns detailed service account information
 func GetServiceAccountDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -454,6 +499,9 @@ func GetServiceAccountDetail(c *gin.Context) {
 
 // GetHPADetail returns detailed HPA information
 func GetHPADetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -467,6 +515,9 @@ func GetHPADetail(c *gin.Context) {
 
 // GetNetworkPolicyDetail returns detailed network policy information
 func GetNetworkPolicyDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 

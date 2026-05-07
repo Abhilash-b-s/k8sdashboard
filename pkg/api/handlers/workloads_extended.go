@@ -12,6 +12,9 @@ import (
 
 // GetDaemonSets returns list of daemonsets
 func GetDaemonSets(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaceFilter := c.Query("namespace")
 	dsets, err := k8s.InformerFactory.Apps().V1().DaemonSets().Lister().List(labels.Everything())
 	if err != nil {
@@ -40,6 +43,9 @@ func GetDaemonSets(c *gin.Context) {
 
 // GetStatefulSets returns list of statefulsets
 func GetStatefulSets(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaceFilter := c.Query("namespace")
 	ssets, err := k8s.InformerFactory.Apps().V1().StatefulSets().Lister().List(labels.Everything())
 	if err != nil {
@@ -64,6 +70,9 @@ func GetStatefulSets(c *gin.Context) {
 
 // GetReplicaSets returns list of replicasets
 func GetReplicaSets(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaceFilter := c.Query("namespace")
 	rsets, err := k8s.InformerFactory.Apps().V1().ReplicaSets().Lister().List(labels.Everything())
 	if err != nil {
@@ -94,40 +103,11 @@ func GetReplicaSets(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"items": result})
 }
 
-// GetReplicationControllers returns list of replication controllers
-func GetReplicationControllers(c *gin.Context) {
-	namespaceFilter := c.Query("namespace")
-	rcs, err := k8s.InformerFactory.Core().V1().ReplicationControllers().Lister().List(labels.Everything())
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list replication controllers"})
-		return
-	}
-
-	var result []ReplicationControllerInfo
-	for _, rc := range rcs {
-		if namespaceFilter != "" && rc.Namespace != namespaceFilter {
-			continue
-		}
-		
-		desired := int32(0)
-		if rc.Spec.Replicas != nil {
-			desired = *rc.Spec.Replicas
-		}
-
-		result = append(result, ReplicationControllerInfo{
-			Name:      rc.Name,
-			Namespace: rc.Namespace,
-			Desired:   desired,
-			Current:   rc.Status.Replicas,
-			Ready:     rc.Status.ReadyReplicas,
-			Age:       FormatAge(rc.CreationTimestamp.Time),
-		})
-	}
-	c.JSON(http.StatusOK, gin.H{"items": result})
-}
-
 // GetJobs returns list of jobs
 func GetJobs(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaceFilter := c.Query("namespace")
 	jobs, err := k8s.InformerFactory.Batch().V1().Jobs().Lister().List(labels.Everything())
 	if err != nil {
@@ -169,6 +149,9 @@ func GetJobs(c *gin.Context) {
 
 // GetCronJobs returns list of cronjobs
 func GetCronJobs(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaceFilter := c.Query("namespace")
 	cronjobs, err := k8s.InformerFactory.Batch().V1().CronJobs().Lister().List(labels.Everything())
 	if err != nil {

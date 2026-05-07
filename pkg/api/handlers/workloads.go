@@ -11,6 +11,9 @@ import (
 
 // GetPods returns list of pods
 func GetPods(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaceFilter := c.Query("namespace")
 	pods, err := k8s.InformerFactory.Core().V1().Pods().Lister().List(labels.Everything())
 	if err != nil {
@@ -30,9 +33,12 @@ func GetPods(c *gin.Context) {
 
 // GetPod returns pod details
 func GetPod(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
     namespace := c.Param("namespace")
     name := c.Param("pod")
-    
+
     pod, err := k8s.InformerFactory.Core().V1().Pods().Lister().Pods(namespace).Get(name)
     if err != nil {
         c.JSON(http.StatusNotFound, gin.H{"error": "Pod not found"})
@@ -53,6 +59,9 @@ func GetPod(c *gin.Context) {
 
 // GetDeploymentDetail returns deployment details
 func GetDeploymentDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -67,6 +76,9 @@ func GetDeploymentDetail(c *gin.Context) {
 
 // GetDeployments returns list of deployments
 func GetDeployments(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	namespaceFilter := c.Query("namespace")
 	deploys, err := k8s.InformerFactory.Apps().V1().Deployments().Lister().List(labels.Everything())
 	if err != nil {

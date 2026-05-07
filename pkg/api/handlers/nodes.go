@@ -12,6 +12,9 @@ import (
 
 // GetNodes returns list of nodes
 func GetNodes(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	nodes, err := k8s.InformerFactory.Core().V1().Nodes().Lister().List(labels.Everything())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list nodes"})
@@ -27,6 +30,9 @@ func GetNodes(c *gin.Context) {
 
 // GetNode returns node details
 func GetNode(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
 	name := c.Param("name")
 	node, err := k8s.InformerFactory.Core().V1().Nodes().Lister().Get(name)
 	if err != nil {
