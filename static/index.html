@@ -8,8 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
-  <script type="module" crossorigin src="./assets/index-Cv4lxTpj.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-B8HX45w3.css">
+  <script type="module" crossorigin src="./assets/index-25kpuI6M.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BnezxUc7.css">
 </head>
 
 <body class="bg-slate-900 text-slate-200 min-h-screen">
@@ -349,10 +349,16 @@
                 preserved.forEach(c => el.classList.add(c));
                 el.setAttribute('data-lucide', name);
             });
-            // Always call createIcons — also converts any plain
-            // `<i data-lucide="...">` (e.g. status pill icons) added directly
-            // by render functions, not just FA-classed elements.
-            window.lucide.createIcons({ attrs: { 'stroke-width': 1.75 } });
+            // Only run createIcons when there are <i data-lucide> elements
+            // pending. Lucide itself selects `[data-lucide]`, which also
+            // matches the SVGs it just produced (they keep the attribute);
+            // calling it unconditionally turns the MutationObserver below
+            // into an infinite icon-replace loop, which destroys click
+            // targets every animation frame and breaks action-column
+            // buttons.
+            if (scope.querySelector('i[data-lucide]')) {
+                window.lucide.createIcons({ attrs: { 'stroke-width': 1.75 } });
+            }
         }
 
         let _iconSwapPending = false;

@@ -75,6 +75,28 @@ svg.lucide {
   height: 1em;
 }
 
+/* Icons inside a clickable button must not be the click target.
+   Lucide replaces an <i> with a fresh <svg> on every icon refresh, so
+   if the SVG is the click target a mousedown landing on it can be lost
+   when the SVG is swapped before mouseup. Forwarding the click to the
+   <button> keeps action-column buttons reliable. */
+button > i,
+button > svg.lucide,
+a > i,
+a > svg.lucide {
+  pointer-events: none;
+}
+
+/* Tailwind v4 dropped the implicit `cursor: pointer` on buttons; restore
+   it so action/sidebar/header buttons feel clickable. Disabled buttons
+   keep the not-allowed affordance. */
+button:not(:disabled) {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
 /* Status as colored dot + label pill */
 [class*="status-"] {
   display: inline-flex;

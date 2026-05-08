@@ -348,10 +348,16 @@
                 preserved.forEach(c => el.classList.add(c));
                 el.setAttribute('data-lucide', name);
             });
-            // Always call createIcons — also converts any plain
-            // `<i data-lucide="...">` (e.g. status pill icons) added directly
-            // by render functions, not just FA-classed elements.
-            window.lucide.createIcons({ attrs: { 'stroke-width': 1.75 } });
+            // Only run createIcons when there are <i data-lucide> elements
+            // pending. Lucide itself selects `[data-lucide]`, which also
+            // matches the SVGs it just produced (they keep the attribute);
+            // calling it unconditionally turns the MutationObserver below
+            // into an infinite icon-replace loop, which destroys click
+            // targets every animation frame and breaks action-column
+            // buttons.
+            if (scope.querySelector('i[data-lucide]')) {
+                window.lucide.createIcons({ attrs: { 'stroke-width': 1.75 } });
+            }
         }
 
         let _iconSwapPending = false;
