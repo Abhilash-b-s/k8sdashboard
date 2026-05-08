@@ -77,40 +77,40 @@
                         <span id="workloads-badge" class="menu-badge">0</span>
                     </div>
                     <ul class="space-y-0.5">
-                        <li><button onclick="navigate('cronjobs')" data-nav="cronjobs"
+                        <li><button onclick="navigate('pods')" data-nav="pods"
                                 class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
-                                <i class="fas fa-clock w-4 text-center text-slate-400"></i>
-                                <span>Cron Jobs</span>
-                            </button></li>
-                        <li><button onclick="navigate('daemonsets')" data-nav="daemonsets"
-                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
-                                <i class="fas fa-server w-4 text-center text-slate-400"></i>
-                                <span>Daemon Sets</span>
+                                <i class="fas fa-cube w-4 text-center text-slate-400"></i>
+                                <span>Pods</span>
                             </button></li>
                         <li><button onclick="navigate('deployments')" data-nav="deployments"
                                 class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
                                 <i class="fas fa-rocket w-4 text-center text-slate-400"></i>
                                 <span>Deployments</span>
                             </button></li>
-                        <li><button onclick="navigate('jobs')" data-nav="jobs"
+                        <li><button onclick="navigate('daemonsets')" data-nav="daemonsets"
                                 class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
-                                <i class="fas fa-tasks w-4 text-center text-slate-400"></i>
-                                <span>Jobs</span>
+                                <i class="fas fa-server w-4 text-center text-slate-400"></i>
+                                <span>Daemon Sets</span>
                             </button></li>
-                        <li><button onclick="navigate('pods')" data-nav="pods"
+                        <li><button onclick="navigate('statefulsets')" data-nav="statefulsets"
                                 class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
-                                <i class="fas fa-cube w-4 text-center text-slate-400"></i>
-                                <span>Pods</span>
+                                <i class="fas fa-database w-4 text-center text-slate-400"></i>
+                                <span>Stateful Sets</span>
                             </button></li>
                         <li><button onclick="navigate('replicasets')" data-nav="replicasets"
                                 class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
                                 <i class="fas fa-clone w-4 text-center text-slate-400"></i>
                                 <span>Replica Sets</span>
                             </button></li>
-                        <li><button onclick="navigate('statefulsets')" data-nav="statefulsets"
+                        <li><button onclick="navigate('jobs')" data-nav="jobs"
                                 class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
-                                <i class="fas fa-database w-4 text-center text-slate-400"></i>
-                                <span>Stateful Sets</span>
+                                <i class="fas fa-tasks w-4 text-center text-slate-400"></i>
+                                <span>Jobs</span>
+                            </button></li>
+                        <li><button onclick="navigate('cronjobs')" data-nav="cronjobs"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-clock w-4 text-center text-slate-400"></i>
+                                <span>Cron Jobs</span>
                             </button></li>
                     </ul>
                 </div>
@@ -155,30 +155,49 @@
                                 <i class="fas fa-file-alt w-4 text-center text-slate-400"></i>
                                 <span>Config Maps</span>
                             </button></li>
-                        <li><button onclick="navigate('horizontalpodautoscalers')" data-nav="horizontalpodautoscalers"
-                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
-                                <i class="fas fa-balance-scale w-4 text-center text-slate-400"></i>
-                                <span>HPAs</span>
-                            </button></li>
                         <li><button onclick="navigate('persistentvolumeclaims')" data-nav="persistentvolumeclaims"
                                 class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
                                 <i class="fas fa-hdd w-4 text-center text-slate-400"></i>
                                 <span>Persistent Volume Claims</span>
+                            </button></li>
+                        <li><button onclick="navigate('persistentvolumes')" data-nav="persistentvolumes"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-database w-4 text-center text-slate-400"></i>
+                                <span>Persistent Volumes</span>
                             </button></li>
                         <li><button onclick="navigate('secrets')" data-nav="secrets"
                                 class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
                                 <i class="fas fa-key w-4 text-center text-slate-400"></i>
                                 <span>Secrets</span>
                             </button></li>
+                        <li><button onclick="navigate('storageclasses')" data-nav="storageclasses"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-layer-group w-4 text-center text-slate-400"></i>
+                                <span>Storage Classes</span>
+                            </button></li>
+                        <li><button onclick="navigate('longhornvolumes')" data-nav="longhornvolumes"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-hdd w-4 text-center text-slate-400"></i>
+                                <span>Longhorn Volumes</span>
+                            </button></li>
                         <li><button onclick="navigate('serviceaccounts')" data-nav="serviceaccounts"
                                 class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
                                 <i class="fas fa-user-cog w-4 text-center text-slate-400"></i>
                                 <span>Service Accounts</span>
                             </button></li>
-                        <li><button onclick="navigate('storageclasses')" data-nav="storageclasses"
+                    </ul>
+                </div>
+
+                <!-- Autoscaling -->
+                <div class="px-3 py-2">
+                    <div class="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">
+                        <span>Autoscaling</span>
+                    </div>
+                    <ul class="space-y-0.5">
+                        <li><button onclick="navigate('horizontalpodautoscalers')" data-nav="horizontalpodautoscalers"
                                 class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
-                                <i class="fas fa-layer-group w-4 text-center text-slate-400"></i>
-                                <span>Storage Classes</span>
+                                <i class="fas fa-balance-scale w-4 text-center text-slate-400"></i>
+                                <span>HPAs</span>
                             </button></li>
                     </ul>
                 </div>
@@ -214,11 +233,6 @@
                                 <i class="fas fa-server w-4 text-center text-slate-400"></i>
                                 <span>Nodes</span>
                             </button></li>
-                        <li><button onclick="navigate('persistentvolumes')" data-nav="persistentvolumes"
-                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
-                                <i class="fas fa-database w-4 text-center text-slate-400"></i>
-                                <span>Persistent Volumes</span>
-                            </button></li>
                         <li><button onclick="navigate('events')" data-nav="events"
                                 class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
                                 <i class="fas fa-bell w-4 text-center text-slate-400"></i>
@@ -237,9 +251,9 @@
         <!-- Main Content -->
         <main class="flex-1 flex flex-col overflow-hidden">
             <!-- Header -->
-            <header class="bg-k8s-blue text-white px-4 py-2 flex items-center justify-between">
+            <header id="app-header" class="bg-slate-800 text-slate-200 px-4 py-2 flex items-center justify-between border-b border-slate-700">
                 <div class="flex items-center space-x-4">
-                    <button onclick="toggleSidebar()" class="p-2 hover:bg-k8s-darkblue rounded">
+                    <button onclick="toggleSidebar()" class="p-2 hover:bg-slate-700 rounded text-slate-300">
                         <i class="fas fa-bars"></i>
                     </button>
                     <nav id="breadcrumb" class="breadcrumb text-sm flex items-center">
@@ -247,10 +261,10 @@
                     </nav>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <button onclick="toggleTheme()" id="theme-toggle" class="p-2 hover:bg-k8s-darkblue rounded" title="Toggle Theme">
+                    <button onclick="toggleTheme()" id="theme-toggle" class="p-2 hover:bg-slate-700 rounded text-slate-300" title="Toggle Theme">
                         <i id="theme-icon" class="fas fa-sun"></i>
                     </button>
-                    <button onclick="refreshData()" class="p-2 hover:bg-k8s-darkblue rounded" title="Refresh">
+                    <button onclick="refreshData()" class="p-2 hover:bg-slate-700 rounded text-slate-300" title="Refresh">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                 </div>
@@ -334,7 +348,10 @@
                 preserved.forEach(c => el.classList.add(c));
                 el.setAttribute('data-lucide', name);
             });
-            if (els.length) window.lucide.createIcons({ attrs: { 'stroke-width': 1.75 } });
+            // Always call createIcons — also converts any plain
+            // `<i data-lucide="...">` (e.g. status pill icons) added directly
+            // by render functions, not just FA-classed elements.
+            window.lucide.createIcons({ attrs: { 'stroke-width': 1.75 } });
         }
 
         let _iconSwapPending = false;
@@ -398,6 +415,7 @@
             { kind: 'view', label: 'PersistentVolumeClaims', view: 'persistentvolumeclaims', icon: 'hard-drive' },
             { kind: 'view', label: 'PersistentVolumes', view: 'persistentvolumes', icon: 'database' },
             { kind: 'view', label: 'StorageClasses', view: 'storageclasses', icon: 'layers' },
+            { kind: 'view', label: 'Longhorn Volumes', view: 'longhornvolumes', icon: 'hard-drive' },
             { kind: 'view', label: 'ServiceAccounts', view: 'serviceaccounts', icon: 'user-cog' },
             { kind: 'view', label: 'HPAs', view: 'horizontalpodautoscalers', icon: 'scale' },
             { kind: 'view', label: 'Nodes', view: 'nodes', icon: 'server' },
@@ -788,6 +806,7 @@
             'persistentvolumeclaims': { category: 'Storage', name: 'PVCs' },
             'persistentvolumes': { category: 'Storage', name: 'Persistent Volumes' },
             'storageclasses': { category: 'Storage', name: 'Storage Classes' },
+            'longhornvolumes': { category: 'Storage', name: 'Longhorn Volumes' },
             'nodes': { category: 'Cluster', name: 'Nodes' },
             'namespaces': { category: 'Cluster', name: 'Namespaces' },
             'clusterroles': { category: 'Cluster', name: 'Cluster Roles' },
@@ -853,6 +872,7 @@
                 case 'persistentvolumeclaims': renderPVCs(); break;
                 case 'persistentvolumes': renderPVs(); break;
                 case 'storageclasses': renderStorageClasses(); break;
+                case 'longhornvolumes': renderLonghornVolumes(); break;
                 case 'clusterroles': renderClusterRoles(); break;
                 case 'clusterrolebindings': renderClusterRoleBindings(); break;
                 case 'roles': renderRoles(); break;
@@ -892,6 +912,7 @@
                 'persistentvolumeclaims': 'Persistent Volume Claims',
                 'persistentvolumes': 'Persistent Volumes',
                 'storageclasses': 'Storage Classes',
+                'longhornvolumes': 'Longhorn Volumes',
                 'clusterroles': 'Cluster Roles',
                 'clusterrolebindings': 'Cluster Role Bindings',
                 'logs': 'Logs'
@@ -1174,14 +1195,68 @@
             });
         }
 
+        // Map a Kubernetes-derived status string to a distinct CSS class.
+        // Match exact tokens (not substrings) so e.g. "CrashLoopBackOff" gets
+        // its own pill and doesn't collapse into a generic "failed" bucket.
         function statusClass(status) {
-            const s = (status || '').toLowerCase();
-            if (['running', 'ready', 'bound', 'active', 'available'].some(x => s.includes(x))) return 'status-running';
-            if (['pending', 'waiting', 'creating'].some(x => s.includes(x))) return 'status-pending';
-            if (['failed', 'error', 'crashloop', 'notready'].some(x => s.includes(x))) return 'status-failed';
-            if (['succeeded', 'completed'].some(x => s.includes(x))) return 'status-succeeded';
-            if (['terminating'].some(x => s.includes(x))) return 'status-terminating';
-            return '';
+            const s = (status || '').toLowerCase().trim();
+            // Healthy / running — green
+            if (s === 'running' || s === 'ready' || s === 'bound' || s === 'active' || s === 'available' ||
+                s === 'attached' || s === 'healthy') return 'status-running';
+            // Successfully completed — blue
+            if (s === 'succeeded' || s === 'completed') return 'status-succeeded';
+            // Waiting to schedule — yellow
+            if (s === 'pending') return 'status-pending';
+            // Coming up (containers being created or pod initializing) — cyan
+            if (s === 'containercreating' || s === 'podinitializing' || s.startsWith('init:')) return 'status-creating';
+            // Longhorn volume transitions — cyan
+            if (s === 'attaching' || s === 'detaching' || s === 'creating' || s === 'deleting') return 'status-creating';
+            // Longhorn detached (idle) — slate (informational, not an error)
+            if (s === 'detached') return 'status-unknown';
+            // Graceful shutdown — orange
+            if (s === 'terminating') return 'status-terminating';
+            // Image / config problems — amber (recoverable but stuck)
+            if (s === 'imagepullbackoff' || s === 'errimagepull' || s === 'invalidimagename' ||
+                s === 'createcontainerconfigerror' || s === 'createcontainererror') return 'status-imageerror';
+            // Crash-looping container — red
+            if (s === 'crashloopbackoff') return 'status-crashloop';
+            // OOM-killed — deep red
+            if (s === 'oomkilled') return 'status-oomkilled';
+            // Pod-Ready condition is False but containers are running — rose
+            // Longhorn "degraded" (replica missing but volume usable) — same bucket
+            if (s === 'notready' || s === 'degraded') return 'status-notready';
+            // Longhorn "faulted" — acute failure
+            if (s === 'faulted') return 'status-failed';
+            // Generic errors / non-zero exits — red
+            if (s === 'failed' || s === 'error' || s.startsWith('exitcode:') || s.startsWith('signal:') ||
+                s === 'rundockererror' || s === 'startup probefailed') return 'status-failed';
+            // Unknown / NodeLost — slate
+            if (s === 'unknown' || s === 'nodelost') return 'status-unknown';
+            // Anything else — slate (still rendered as a pill, not bare text)
+            return 'status-unknown';
+        }
+
+        // Optional Lucide icon shown inside the pill for "in-progress" states.
+        // Healthy / terminal states keep the simple colored dot.
+        function statusIcon(status) {
+            const s = (status || '').toLowerCase().trim();
+            if (s.startsWith('init:')) return 'loader-2';
+            if (s === 'containercreating' || s === 'podinitializing') return 'loader-2';
+            if (s === 'pending') return 'loader-2';
+            if (s === 'terminating') return 'circle-dashed';
+            return null;
+        }
+
+        // statusPillHTML builds the full pill markup including the optional
+        // spinning icon. Use this everywhere a status is rendered.
+        function statusPillHTML(status) {
+            const text = status || '';
+            const cls = statusClass(text);
+            const icon = statusIcon(text);
+            if (icon) {
+                return `<span class="${cls} has-icon"><i data-lucide="${icon}" class="status-spin"></i>${text}</span>`;
+            }
+            return `<span class="${cls}">${text}</span>`;
         }
 
         function escapeHtml(text) {
@@ -1205,7 +1280,7 @@
                     <div class="bg-slate-800 rounded-lg border border-slate-700">
                         ${renderTable([
                     { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showNodeDetail('${r.name}')">${r.name}</span>` },
-                    { label: 'Status', key: 'status', render: r => `<span class="${statusClass(r.status)}">${r.status}</span>` },
+                    { label: 'Status', key: 'status', render: r => statusPillHTML(r.status) },
                     { label: 'Roles', key: 'roles', render: r => r.roles?.join(', ') || '-' },
                     { label: 'Version', key: 'version' },
                     { label: 'Internal IP', key: 'internalIP' },
@@ -1486,7 +1561,24 @@
                     tr.setAttribute('data-key', key);
                     tr.className = 'hover:bg-slate-700/50';
                     tr.innerHTML = this._rowHTML(r);
-                    tbody.appendChild(tr);
+                    // Insert at the correct sorted position rather than appending.
+                    // Walk existing rows; insert before the first one that
+                    // sorts after the new row.
+                    let inserted = false;
+                    for (const child of tbody.children) {
+                        const childKey = child.getAttribute('data-key');
+                        const childRow = this.rowsByKey.get(childKey);
+                        if (!childRow) continue;
+                        if (this._sort(r, childRow) < 0) {
+                            tbody.insertBefore(tr, child);
+                            inserted = true;
+                            break;
+                        }
+                    }
+                    if (!inserted) tbody.appendChild(tr);
+                    // Briefly highlight the new row so the eye catches it.
+                    tr.classList.add('bg-green-500/10');
+                    setTimeout(() => tr && tr.classList.remove('bg-green-500/10'), 800);
                     this._updateCount(tbody.children.length);
                 }
             },
@@ -1548,7 +1640,7 @@
                 columns: [
                     { label: 'Name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showPodDetail('${r.namespace}', '${r.name}')">${r.name}</span>` },
                     { label: 'Namespace', class: 'cell-namespace', render: r => r.namespace || '' },
-                    { label: 'Status', render: r => `<span class="${statusClass(r.status)}">${r.status || ''}</span>` },
+                    { label: 'Status', render: r => statusPillHTML(r.status) },
                     { label: 'Ready', render: r => r.ready || '' },
                     { label: 'Node', render: r => r.node || '' },
                     { label: 'Age', class: 'text-slate-400', render: r => r.age || '' },
@@ -1571,7 +1663,7 @@
                         <div class="bg-slate-700 rounded p-4">
                             <h3 class="text-sm font-semibold text-k8s-blue mb-3">Basic Information</h3>
                             <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                                <div><span class="text-slate-400">Status:</span> <span class="${statusClass(data.status)}">${data.status}</span></div>
+                                <div><span class="text-slate-400">Status:</span> ${statusPillHTML(data.status)}</div>
                                 <div><span class="text-slate-400">Node:</span> ${data.node || '-'}</div>
                                 <div><span class="text-slate-400">Pod IP:</span> <span class="text-k8s-blue">${data.podIP || '-'}</span></div>
                                 <div><span class="text-slate-400">Host IP:</span> ${data.hostIP || '-'}</div>
@@ -1789,8 +1881,12 @@
         window._yamlEditor = null;
 
         async function editResourceYaml(kind, namespace, name) {
+            // Cluster-scoped resources pass null/empty namespace; encode as
+            // "_" placeholder so URL has a stable shape.
+            const ns = namespace || '_';
             const display = kind.charAt(0).toUpperCase() + kind.slice(1).replace(/s$/, '');
-            document.getElementById('modal-title').textContent = `Edit ${display}: ${namespace}/${name}`;
+            const titleSuffix = namespace ? `${namespace}/${name}` : name;
+            document.getElementById('modal-title').textContent = `Edit ${display}: ${titleSuffix}`;
             // Fixed-height editor + sticky footer so the Save button is always
             // reachable regardless of YAML length. modal-content itself can
             // still scroll if the viewport is very short.
@@ -1809,7 +1905,7 @@
                 </div>
                 <div class="sticky bottom-0 left-0 right-0 -mx-4 -mb-4 mt-4 px-4 py-3 bg-slate-800 border-t border-slate-700 flex items-center justify-end gap-2">
                     <button onclick="closeModal()" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded text-sm">Cancel</button>
-                    <button id="yaml-save-btn" onclick="saveResourceYaml('${kind}', '${namespace}', '${name}')" class="px-4 py-2 bg-green-600 hover:bg-green-500 rounded text-sm">
+                    <button id="yaml-save-btn" onclick="saveResourceYaml('${kind}', '${ns}', '${name}')" class="px-4 py-2 bg-green-600 hover:bg-green-500 rounded text-sm">
                         <i class="fas fa-check mr-1"></i>Save
                     </button>
                 </div>
@@ -1821,7 +1917,7 @@
                     throw new Error('Editor not loaded yet — refresh the page');
                 }
                 const [yamlRes, cm] = await Promise.all([
-                    fetch(`${getClusterAPI()}/yaml/${kind}/${namespace}/${name}`),
+                    fetch(`${getClusterAPI()}/yaml/${kind}/${ns}/${name}`),
                     window.loadCodeMirror()
                 ]);
                 if (!yamlRes.ok) {
@@ -1891,7 +1987,9 @@
 
         // Tiny helper for table action columns
         function editBtnHTML(kind, ns, name) {
-            return `<button onclick="editResourceYaml('${kind}', '${ns}', '${name}')" class="text-green-400 hover:text-green-300" title="Edit YAML"><i class="fas fa-edit"></i></button>`;
+            // Cluster-scoped resources pass null/empty for ns.
+            const nsArg = ns ? `'${ns}'` : 'null';
+            return `<button onclick="editResourceYaml('${kind}', ${nsArg}, '${name}')" class="text-green-400 hover:text-green-300" title="Edit YAML"><i class="fas fa-edit"></i></button>`;
         }
 
         function viewLogs(namespace, pod) {
@@ -2232,7 +2330,7 @@
                     </div>
                     <div class="bg-slate-800 rounded-lg border border-slate-700">
                         ${renderTable([
-                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('services', '${r.namespace}', '${r.name}')">${r.name}</span>` },
                     { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
                     { label: 'Type', key: 'type' },
                     { label: 'Cluster IP', key: 'clusterIP' },
@@ -2260,7 +2358,7 @@
                     </div>
                     <div class="bg-slate-800 rounded-lg border border-slate-700">
                         ${renderTable([
-                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('ingresses', '${r.namespace}', '${r.name}')">${r.name}</span>` },
                     { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
                     { label: 'Class', key: 'class' },
                     { label: 'Hosts', key: 'hosts' },
@@ -2386,7 +2484,7 @@
                     </div>
                     <div class="bg-slate-800 rounded-lg border border-slate-700">
                         ${renderTable([
-                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showSecretDetail('${r.namespace}', '${r.name}')">${r.name}</span>` },
                     { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
                     { label: 'Type', key: 'type' },
                     { label: 'Data', key: 'data' },
@@ -2396,6 +2494,78 @@
                 `;
             } catch (err) {
                 content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        async function showSecretDetail(namespace, name, reveal = false) {
+            try {
+                const url = `${getClusterAPI()}/secrets/${namespace}/${name}${reveal ? '?reveal=true' : ''}`;
+                const data = await fetchAPI(url);
+                document.getElementById('modal-title').textContent = `Secret: ${namespace}/${name}`;
+                const items = data.data || [];
+                const labels = data.labels || {};
+                const annotations = data.annotations || {};
+                document.getElementById('modal-content').innerHTML = `
+                    <div class="space-y-4">
+                        <div class="bg-slate-700/40 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Basic Information</h3>
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div><span class="text-slate-400">Name:</span> ${data.name || name}</div>
+                                <div><span class="text-slate-400">Namespace:</span> ${data.namespace || namespace}</div>
+                                <div><span class="text-slate-400">Type:</span> <span class="mono">${data.type || ''}</span></div>
+                                <div><span class="text-slate-400">Keys:</span> ${items.length}</div>
+                                <div><span class="text-slate-400">Age:</span> ${data.age || ''}</div>
+                            </div>
+                        </div>
+                        ${Object.keys(labels).length ? `
+                        <div class="bg-slate-700/40 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Labels</h3>
+                            <div class="flex flex-wrap gap-2">
+                                ${Object.entries(labels).map(([k, v]) => `<span class="px-2 py-1 bg-slate-600 rounded text-xs mono">${k}=${v}</span>`).join('')}
+                            </div>
+                        </div>` : ''}
+                        ${Object.keys(annotations).length ? `
+                        <div class="bg-slate-700/40 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Annotations</h3>
+                            <div class="space-y-1 text-xs mono break-all">
+                                ${Object.entries(annotations).map(([k, v]) => `<div><span class="text-slate-400">${k}:</span> ${v}</div>`).join('')}
+                            </div>
+                        </div>` : ''}
+                        <div class="bg-slate-700/40 rounded p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-sm font-semibold text-k8s-blue">Data (${items.length} ${items.length === 1 ? 'key' : 'keys'})</h3>
+                                <div class="flex gap-2">
+                                    ${reveal
+                                        ? `<button onclick="showSecretDetail('${namespace}','${name}',false)" class="px-2 py-1 bg-slate-600 hover:bg-slate-500 rounded text-xs"><i class="fas fa-eraser mr-1"></i>Hide values</button>`
+                                        : `<button onclick="showSecretDetail('${namespace}','${name}',true)" class="px-2 py-1 bg-slate-600 hover:bg-slate-500 rounded text-xs"><i class="fas fa-key mr-1"></i>Reveal values</button>`}
+                                    <button onclick="editResourceYaml('secrets','${namespace}','${name}')" class="px-2 py-1 bg-green-600 hover:bg-green-500 rounded text-xs"><i class="fas fa-edit mr-1"></i>Edit YAML</button>
+                                </div>
+                            </div>
+                            ${items.length === 0 ? '<div class="text-sm text-slate-400">No data keys.</div>' : `
+                            <div class="space-y-2">
+                                ${items.map(it => {
+                                    const safe = (it.value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                    return `
+                                    <div class="bg-slate-800 border border-slate-700 rounded p-2">
+                                        <div class="flex items-center justify-between mb-1">
+                                            <span class="text-xs font-medium text-slate-200 mono">${it.key}</span>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-[10px] text-slate-400">${it.size} bytes</span>
+                                                ${reveal ? `<button onclick="navigator.clipboard.writeText(\`${(it.value || '').replace(/`/g,'\\`')}\`)" class="px-1.5 py-0.5 text-[10px] bg-slate-700 hover:bg-slate-600 rounded">Copy</button>` : ''}
+                                            </div>
+                                        </div>
+                                        ${reveal
+                                            ? `<pre class="text-[11px] mono whitespace-pre-wrap break-all max-h-48 overflow-auto bg-slate-900 rounded p-2 text-slate-200">${safe}</pre>`
+                                            : `<div class="text-[11px] text-slate-500 italic">hidden — click "Reveal values" to show</div>`}
+                                    </div>`;
+                                }).join('')}
+                            </div>`}
+                        </div>
+                    </div>
+                `;
+                document.getElementById('detail-modal').classList.remove('hidden');
+            } catch (err) {
+                alert('Error loading secret: ' + err.message);
             }
         }
 
@@ -2414,7 +2584,7 @@
                         ${renderTable([
                     { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
                     { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
-                    { label: 'Status', key: 'status', render: r => `<span class="${statusClass(r.status)}">${r.status}</span>` },
+                    { label: 'Status', key: 'status', render: r => statusPillHTML(r.status) },
                     { label: 'Volume', key: 'volume' },
                     { label: 'Capacity', key: 'capacity' },
                     { label: 'Storage Class', key: 'storageClass' },
@@ -2443,7 +2613,7 @@
                     { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
                     { label: 'Capacity', key: 'capacity' },
                     { label: 'Reclaim Policy', key: 'reclaimPolicy' },
-                    { label: 'Status', key: 'status', render: r => `<span class="${statusClass(r.status)}">${r.status}</span>` },
+                    { label: 'Status', key: 'status', render: r => statusPillHTML(r.status) },
                     { label: 'Claim', key: 'claim' },
                     { label: 'Storage Class', key: 'storageClass' },
                     { label: 'Age', key: 'age', class: 'text-slate-400' }
@@ -2468,7 +2638,7 @@
                     </div>
                     <div class="bg-slate-800 rounded-lg border border-slate-700">
                         ${renderTable([
-                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}${r.isDefault ? ' (default)' : ''}</span>` },
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>${r.isDefault ? ' <span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-k8s-blue/15 text-k8s-blue border border-k8s-blue/30">default</span>' : ''}` },
                     { label: 'Provisioner', key: 'provisioner' },
                     { label: 'Reclaim Policy', key: 'reclaimPolicy' },
                     { label: 'Volume Binding', key: 'volumeBinding' },
@@ -2479,6 +2649,151 @@
                 `;
             } catch (err) {
                 content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        // Longhorn Volumes — CRD list, also editable via YAML drawer.
+        async function renderLonghornVolumes() {
+            const content = document.getElementById('content');
+            content.innerHTML = skeletonTable(7, 8);
+            try {
+                const data = await fetch(`${getClusterAPI()}/longhornvolumes`).then(r => r.json());
+                if (data && data.available === false) {
+                    content.innerHTML = `
+                        <div class="mb-4"><h1 class="text-xl font-bold">Longhorn Volumes</h1></div>
+                        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 text-sm text-slate-300">
+                            <div class="flex items-start gap-3">
+                                <i class="fas fa-exclamation-triangle text-yellow-400 mt-1"></i>
+                                <div>
+                                    <div class="font-medium mb-1">Longhorn isn't installed on this cluster.</div>
+                                    <div class="text-slate-400">${data.hint || 'No volumes.longhorn.io CRD found.'}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <h1 class="text-xl font-bold">Longhorn Volumes</h1>
+                            ${data.version ? `<span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">${data.version}</span>` : ''}
+                        </div>
+                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                            { label: 'Name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showLonghornVolumeDetail('${r.namespace}', '${r.name}')">${r.name}</span>` },
+                            { label: 'Namespace', class: 'cell-namespace', render: r => r.namespace || '' },
+                            { label: 'State', render: r => statusPillHTML(r.state || 'unknown') },
+                            { label: 'Robustness', render: r => statusPillHTML(r.robustness || 'unknown') },
+                            { label: 'Size', render: r => r.size || '-' },
+                            { label: 'Used', render: r => r.actualSize || '-' },
+                            { label: 'Replicas', render: r => r.numberOfReplicas ?? '-' },
+                            { label: 'Node', render: r => r.node || '-' },
+                            { label: 'PVC', render: r => r.pvcName ? `<span class="mono text-xs text-slate-400">${r.pvcNamespace || ''}/${r.pvcName}</span>` : '-' },
+                            { label: 'Age', class: 'text-slate-400', render: r => r.age || '' },
+                        ], getItems(data), r => editBtnHTML('longhornvolumes', r.namespace, r.name))}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        async function showLonghornVolumeDetail(namespace, name) {
+            try {
+                const data = await fetchAPI(`${getClusterAPI()}/longhornvolumes/${namespace}/${name}`);
+                document.getElementById('modal-title').textContent = `Longhorn Volume: ${namespace}/${name}`;
+                const spec = data.spec || {};
+                const status = data.status || {};
+                const ks = status.kubernetesStatus || {};
+                const conditions = status.conditions || [];
+                const replicas = status.replicas || {};
+                document.getElementById('modal-content').innerHTML = `
+                    <div class="space-y-4">
+                        <div class="bg-slate-700/40 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Status</h3>
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div><span class="text-slate-400">State:</span> ${statusPillHTML(status.state || 'unknown')}</div>
+                                <div><span class="text-slate-400">Robustness:</span> ${statusPillHTML(status.robustness || 'unknown')}</div>
+                                <div><span class="text-slate-400">Current Node:</span> <span class="mono">${status.currentNodeID || '-'}</span></div>
+                                <div><span class="text-slate-400">Owner:</span> <span class="mono">${status.ownerID || '-'}</span></div>
+                                <div><span class="text-slate-400">Frontend:</span> ${spec.frontend || '-'}</div>
+                                <div><span class="text-slate-400">Frontend Disabled:</span> ${spec.disableFrontend ? 'Yes' : 'No'}</div>
+                            </div>
+                        </div>
+                        <div class="bg-slate-700/40 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Spec</h3>
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div><span class="text-slate-400">Size:</span> <span class="mono">${spec.size || '-'}</span></div>
+                                <div><span class="text-slate-400">Replicas:</span> ${spec.numberOfReplicas ?? '-'}</div>
+                                <div><span class="text-slate-400">Node Selector:</span> <span class="mono text-xs">${(spec.nodeSelector || []).join(', ') || '-'}</span></div>
+                                <div><span class="text-slate-400">Disk Selector:</span> <span class="mono text-xs">${(spec.diskSelector || []).join(', ') || '-'}</span></div>
+                                <div><span class="text-slate-400">Stale Replica Timeout:</span> ${spec.staleReplicaTimeout ?? '-'}</div>
+                                <div><span class="text-slate-400">Encrypted:</span> ${spec.encrypted ? 'Yes' : 'No'}</div>
+                            </div>
+                        </div>
+                        ${(ks.pvName || ks.pvcName) ? `
+                        <div class="bg-slate-700/40 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Kubernetes Bindings</h3>
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div><span class="text-slate-400">PV:</span> <span class="mono">${ks.pvName || '-'}</span></div>
+                                <div><span class="text-slate-400">PV Status:</span> <span class="mono">${ks.pvStatus || '-'}</span></div>
+                                <div><span class="text-slate-400">PVC:</span> <span class="mono">${ks.pvcName ? (ks.namespace || '') + '/' + ks.pvcName : '-'}</span></div>
+                                <div><span class="text-slate-400">Workloads:</span> <span class="mono text-xs">${(ks.workloadsStatus || []).map(w => w.podName || w.workloadName).join(', ') || '-'}</span></div>
+                            </div>
+                        </div>` : ''}
+                        ${Object.keys(replicas).length ? `
+                        <div class="bg-slate-700/40 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Replicas (${Object.keys(replicas).length})</h3>
+                            <table class="w-full text-xs">
+                                <thead><tr class="text-slate-400 border-b border-slate-600">
+                                    <th class="text-left p-2">Name</th>
+                                    <th class="text-left p-2">Mode</th>
+                                    <th class="text-left p-2">Running</th>
+                                </tr></thead>
+                                <tbody>
+                                    ${Object.entries(replicas).map(([k, v]) => `
+                                        <tr class="border-b border-slate-600/50">
+                                            <td class="p-2 mono">${k}</td>
+                                            <td class="p-2">${(v && v.mode) || '-'}</td>
+                                            <td class="p-2">${v && v.running ? 'Yes' : 'No'}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>` : ''}
+                        ${conditions.length ? `
+                        <div class="bg-slate-700/40 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Conditions (${conditions.length})</h3>
+                            <table class="w-full text-xs">
+                                <thead><tr class="text-slate-400 border-b border-slate-600">
+                                    <th class="text-left p-2">Type</th>
+                                    <th class="text-left p-2">Status</th>
+                                    <th class="text-left p-2">Reason</th>
+                                    <th class="text-left p-2">Message</th>
+                                </tr></thead>
+                                <tbody>
+                                    ${conditions.map(c => `
+                                        <tr class="border-b border-slate-600/50">
+                                            <td class="p-2 mono">${c.type}</td>
+                                            <td class="p-2">${c.status}</td>
+                                            <td class="p-2 text-slate-400">${c.reason || '-'}</td>
+                                            <td class="p-2 text-slate-400">${(c.message || '').slice(0, 120)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>` : ''}
+                        <div class="flex justify-end">
+                            <button onclick="editResourceYaml('longhornvolumes','${namespace}','${name}')" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm"><i class="fas fa-edit mr-1"></i>Edit YAML</button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('detail-modal').classList.remove('hidden');
+            } catch (err) {
+                alert('Error loading volume: ' + err.message);
             }
         }
 
@@ -2498,7 +2813,7 @@
                     { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('clusterroles', null, '${r.name}')">${r.name}</span>` },
                     { label: 'Rules', key: 'rules' },
                     { label: 'Age', key: 'age', class: 'text-slate-400' }
-                ], getItems(data))}
+                ], getItems(data), r => editBtnHTML('clusterroles', null, r.name))}
                     </div>
                 `;
             } catch (err) {
@@ -2545,7 +2860,7 @@
                     <div class="bg-slate-800 rounded-lg border border-slate-700">
                         ${renderTable([
                     { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="changeNamespace('${r.name}', true); navigate('pods');">${r.name}</span>` },
-                    { label: 'Status', key: 'status', render: r => `<span class="${statusClass(r.status)}">${r.status}</span>` },
+                    { label: 'Status', key: 'status', render: r => statusPillHTML(r.status) },
                     { label: 'Age', key: 'age', class: 'text-slate-400' }
                 ], getItems(data))}
                     </div>
@@ -2653,7 +2968,7 @@
                     { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
                     { label: 'Rules', key: 'rules' },
                     { label: 'Age', key: 'age', class: 'text-slate-400' }
-                ], getItems(data))}
+                ], getItems(data), r => editBtnHTML('roles', r.namespace, r.name))}
                     </div>
                 `;
             } catch (err) {
@@ -2763,6 +3078,128 @@
                             </div>
                             ` : '<p class="text-slate-400 text-sm">No rules defined</p>'}
                         </div>
+                    `;
+                }
+
+                // Services — type, IPs, ports, selector
+                if (resourceType === 'services') {
+                    const spec = data.spec || {};
+                    const status = data.status || {};
+                    const ports = spec.ports || [];
+                    const selector = spec.selector || {};
+                    const externalIPs = []
+                        .concat(spec.externalIPs || [])
+                        .concat((status.loadBalancer?.ingress || []).map(i => i.ip || i.hostname).filter(Boolean));
+                    structuredContent = `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Service</h3>
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div><span class="text-slate-400">Type:</span> <span class="mono">${spec.type || 'ClusterIP'}</span></div>
+                                <div><span class="text-slate-400">Cluster IP:</span> <span class="mono">${spec.clusterIP || '-'}</span></div>
+                                ${(spec.clusterIPs || []).length > 1 ? `<div class="col-span-2"><span class="text-slate-400">Cluster IPs:</span> <span class="mono">${spec.clusterIPs.join(', ')}</span></div>` : ''}
+                                ${externalIPs.length ? `<div class="col-span-2"><span class="text-slate-400">External IPs:</span> <span class="mono">${externalIPs.join(', ')}</span></div>` : ''}
+                                ${spec.sessionAffinity ? `<div><span class="text-slate-400">Session Affinity:</span> ${spec.sessionAffinity}</div>` : ''}
+                                ${spec.externalTrafficPolicy ? `<div><span class="text-slate-400">External Traffic Policy:</span> ${spec.externalTrafficPolicy}</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Ports (${ports.length})</h3>
+                            ${ports.length ? `
+                            <table class="w-full text-xs">
+                                <thead><tr class="text-slate-400 border-b border-slate-600">
+                                    <th class="text-left p-2">Name</th>
+                                    <th class="text-left p-2">Port</th>
+                                    <th class="text-left p-2">Target Port</th>
+                                    <th class="text-left p-2">Node Port</th>
+                                    <th class="text-left p-2">Protocol</th>
+                                </tr></thead>
+                                <tbody>
+                                    ${ports.map(p => `
+                                        <tr class="border-b border-slate-600/50">
+                                            <td class="p-2 mono">${p.name || '-'}</td>
+                                            <td class="p-2 mono">${p.port}</td>
+                                            <td class="p-2 mono">${p.targetPort ?? '-'}</td>
+                                            <td class="p-2 mono">${p.nodePort ?? '-'}</td>
+                                            <td class="p-2">${p.protocol || 'TCP'}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>` : '<p class="text-slate-400 text-sm">No ports defined.</p>'}
+                        </div>
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Selector</h3>
+                            ${Object.keys(selector).length ? `
+                            <div class="flex flex-wrap gap-2">
+                                ${Object.entries(selector).map(([k, v]) => `<span class="px-2 py-1 bg-slate-600 rounded text-xs mono">${k}=${v}</span>`).join('')}
+                            </div>` : '<p class="text-slate-400 text-sm">No selector — typically a headless service or externally managed endpoints.</p>'}
+                        </div>
+                    `;
+                }
+
+                // Ingresses — class, rules (host → paths), TLS
+                if (resourceType === 'ingresses') {
+                    const spec = data.spec || {};
+                    const status = data.status || {};
+                    const rules = spec.rules || [];
+                    const tls = spec.tls || [];
+                    const lb = (status.loadBalancer?.ingress || []).map(i => i.ip || i.hostname).filter(Boolean);
+                    const renderBackend = (b) => {
+                        if (!b) return '-';
+                        if (b.service) {
+                            const portTxt = b.service.port?.number ?? b.service.port?.name ?? '';
+                            return `<span class="mono">${b.service.name}${portTxt ? ':' + portTxt : ''}</span>`;
+                        }
+                        return JSON.stringify(b);
+                    };
+                    structuredContent = `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Ingress</h3>
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div><span class="text-slate-400">Class:</span> <span class="mono">${spec.ingressClassName || '-'}</span></div>
+                                <div><span class="text-slate-400">Address:</span> <span class="mono">${lb.join(', ') || '-'}</span></div>
+                                ${spec.defaultBackend ? `<div class="col-span-2"><span class="text-slate-400">Default Backend:</span> ${renderBackend(spec.defaultBackend)}</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Rules (${rules.length})</h3>
+                            ${rules.length ? `
+                            <div class="space-y-3">
+                                ${rules.map(rule => `
+                                    <div class="bg-slate-800 border border-slate-600 rounded p-3">
+                                        <div class="text-xs text-slate-400 mb-2">Host: <span class="mono text-white">${rule.host || '*'}</span></div>
+                                        ${(rule.http?.paths || []).length ? `
+                                        <table class="w-full text-xs">
+                                            <thead><tr class="text-slate-400 border-b border-slate-600/50">
+                                                <th class="text-left p-1">Path</th>
+                                                <th class="text-left p-1">Path Type</th>
+                                                <th class="text-left p-1">Backend</th>
+                                            </tr></thead>
+                                            <tbody>
+                                                ${rule.http.paths.map(p => `
+                                                    <tr>
+                                                        <td class="p-1 mono">${p.path || '/'}</td>
+                                                        <td class="p-1">${p.pathType || 'ImplementationSpecific'}</td>
+                                                        <td class="p-1">${renderBackend(p.backend)}</td>
+                                                    </tr>
+                                                `).join('')}
+                                            </tbody>
+                                        </table>` : '<div class="text-xs text-slate-500">No HTTP paths.</div>'}
+                                    </div>
+                                `).join('')}
+                            </div>` : '<p class="text-slate-400 text-sm">No rules defined.</p>'}
+                        </div>
+                        ${tls.length ? `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">TLS (${tls.length})</h3>
+                            <div class="space-y-2 text-xs">
+                                ${tls.map(t => `
+                                    <div class="bg-slate-800 border border-slate-600 rounded p-2">
+                                        <div><span class="text-slate-400">Hosts:</span> <span class="mono">${(t.hosts || []).join(', ') || '-'}</span></div>
+                                        <div><span class="text-slate-400">Secret:</span> <span class="mono">${t.secretName || '-'}</span></div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>` : ''}
                     `;
                 }
 

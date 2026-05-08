@@ -247,10 +247,17 @@ func GetClusterSecretDetail(c *gin.Context) {
 		return
 	}
 
-	// Only return keys, not values for security
-	keys := make([]string, 0, len(secret.Data))
-	for k := range secret.Data {
-		keys = append(keys, k)
+	// Default response: keys with byte sizes (no values).
+	// Pass ?reveal=true to include decoded values — gated explicitly so that
+	// values aren't shipped to the browser unless the user clicked Reveal.
+	reveal := c.Query("reveal") == "true"
+	keys := make([]gin.H, 0, len(secret.Data))
+	for k, v := range secret.Data {
+		entry := gin.H{"key": k, "size": len(v)}
+		if reveal {
+			entry["value"] = string(v)
+		}
+		keys = append(keys, entry)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -259,7 +266,8 @@ func GetClusterSecretDetail(c *gin.Context) {
 		"type":        string(secret.Type),
 		"labels":      secret.Labels,
 		"annotations": secret.Annotations,
-		"keys":        keys,
+		"data":        keys,
+		"keys":        keys, // legacy alias
 		"age":         FormatAge(secret.CreationTimestamp.Time),
 	})
 }
@@ -394,11 +402,22 @@ func GetClusterStorageClasses(c *gin.Context) {
 		if sc.VolumeBindingMode != nil {
 			volumeBindingMode = string(*sc.VolumeBindingMode)
 		}
+		// A StorageClass is the cluster default if either the GA or beta
+		// is-default-class annotation is set to "true".
+		isDefault := sc.Annotations["storageclass.kubernetes.io/is-default-class"] == "true" ||
+			sc.Annotations["storageclass.beta.kubernetes.io/is-default-class"] == "true"
+		allowExpansion := false
+		if sc.AllowVolumeExpansion != nil {
+			allowExpansion = *sc.AllowVolumeExpansion
+		}
 		result = append(result, gin.H{
 			"name":              sc.Name,
 			"provisioner":       sc.Provisioner,
 			"reclaimPolicy":     reclaimPolicy,
-			"volumeBindingMode": volumeBindingMode,
+			"volumeBinding":     volumeBindingMode,
+			"volumeBindingMode": volumeBindingMode, // keep old key for any callers
+			"allowExpansion":    allowExpansion,
+			"isDefault":         isDefault,
 			"age":               FormatAge(sc.CreationTimestamp.Time),
 		})
 	}

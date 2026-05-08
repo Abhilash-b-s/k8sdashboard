@@ -100,10 +100,8 @@ func GetStorageClasses(c *gin.Context) {
 
 	var result []StorageClassInfo
 	for _, sc := range scs {
-		isDefault := false
-		if val, ok := sc.Annotations["storageclass.kubernetes.io/is-default-class"]; ok && val == "true" {
-			isDefault = true
-		}
+		isDefault := sc.Annotations["storageclass.kubernetes.io/is-default-class"] == "true" ||
+			sc.Annotations["storageclass.beta.kubernetes.io/is-default-class"] == "true"
 
 		allowExpansion := false
 		if sc.AllowVolumeExpansion != nil {

@@ -12,18 +12,45 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// kindToGVR maps the URL :kind segment to a Kubernetes GroupVersionResource.
-// Only resources we explicitly support YAML editing for are listed.
-var kindToGVR = map[string]schema.GroupVersionResource{
-	"deployments":  {Group: "apps", Version: "v1", Resource: "deployments"},
-	"statefulsets": {Group: "apps", Version: "v1", Resource: "statefulsets"},
-	"daemonsets":   {Group: "apps", Version: "v1", Resource: "daemonsets"},
-	"replicasets":  {Group: "apps", Version: "v1", Resource: "replicasets"},
-	"services":     {Group: "", Version: "v1", Resource: "services"},
-	"configmaps":   {Group: "", Version: "v1", Resource: "configmaps"},
-	"secrets":      {Group: "", Version: "v1", Resource: "secrets"},
-	"pods":         {Group: "", Version: "v1", Resource: "pods"},
-	"ingresses":    {Group: "networking.k8s.io", Version: "v1", Resource: "ingresses"},
+// kindEntry describes a YAML-editable resource kind.
+type kindEntry struct {
+	GVR           schema.GroupVersionResource
+	ClusterScoped bool
+}
+
+// kindToGVR maps the URL :kind segment to its GVR + scope. Cluster-scoped
+// resources accept "_" or "-" as the namespace placeholder in the URL.
+var kindToGVR = map[string]kindEntry{
+	"deployments":         {GVR: schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}},
+	"statefulsets":        {GVR: schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "statefulsets"}},
+	"daemonsets":          {GVR: schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "daemonsets"}},
+	"replicasets":         {GVR: schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "replicasets"}},
+	"services":            {GVR: schema.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}},
+	"configmaps":          {GVR: schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"}},
+	"secrets":             {GVR: schema.GroupVersionResource{Group: "", Version: "v1", Resource: "secrets"}},
+	"pods":                {GVR: schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}},
+	"ingresses":           {GVR: schema.GroupVersionResource{Group: "networking.k8s.io", Version: "v1", Resource: "ingresses"}},
+	"roles":               {GVR: schema.GroupVersionResource{Group: "rbac.authorization.k8s.io", Version: "v1", Resource: "roles"}},
+	"rolebindings":        {GVR: schema.GroupVersionResource{Group: "rbac.authorization.k8s.io", Version: "v1", Resource: "rolebindings"}},
+	"clusterroles":        {GVR: schema.GroupVersionResource{Group: "rbac.authorization.k8s.io", Version: "v1", Resource: "clusterroles"}, ClusterScoped: true},
+	"clusterrolebindings": {GVR: schema.GroupVersionResource{Group: "rbac.authorization.k8s.io", Version: "v1", Resource: "clusterrolebindings"}, ClusterScoped: true},
+	"namespaces":          {GVR: schema.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}, ClusterScoped: true},
+	"persistentvolumes":   {GVR: schema.GroupVersionResource{Group: "", Version: "v1", Resource: "persistentvolumes"}, ClusterScoped: true},
+	"storageclasses":      {GVR: schema.GroupVersionResource{Group: "storage.k8s.io", Version: "v1", Resource: "storageclasses"}, ClusterScoped: true},
+	// Longhorn — namespaced; uses v1beta2 in current Longhorn (1.3+).
+	"longhornvolumes": {GVR: schema.GroupVersionResource{Group: "longhorn.io", Version: "v1beta2", Resource: "volumes"}},
+}
+
+// resolveNamespace normalizes the URL :namespace segment. Cluster-scoped
+// resources accept "_" or "-" (or any value — it's ignored) as a placeholder.
+func resolveNamespace(raw string, entry kindEntry) string {
+	if entry.ClusterScoped {
+		return ""
+	}
+	if raw == "_" || raw == "-" {
+		return ""
+	}
+	return raw
 }
 
 // stripServerFields removes fields the API server populates so that the
@@ -50,14 +77,14 @@ func GetClusterResourceYAML(c *gin.Context) {
 	}
 
 	kind := c.Param("kind")
-	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	gvr, ok := kindToGVR[kind]
+	entry, ok := kindToGVR[kind]
 	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported kind", "kind": kind})
 		return
 	}
+	namespace := resolveNamespace(c.Param("namespace"), entry)
 
 	dyn, err := dynamic.NewForConfig(client.RestConfig)
 	if err != nil {
@@ -65,7 +92,7 @@ func GetClusterResourceYAML(c *gin.Context) {
 		return
 	}
 
-	obj, err := dyn.Resource(gvr).Namespace(namespace).Get(c.Request.Context(), name, metav1.GetOptions{})
+	obj, err := dyn.Resource(entry.GVR).Namespace(namespace).Get(c.Request.Context(), name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "resource not found"})
@@ -98,14 +125,14 @@ func UpdateClusterResourceYAML(c *gin.Context) {
 	}
 
 	kind := c.Param("kind")
-	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	gvr, ok := kindToGVR[kind]
+	entry, ok := kindToGVR[kind]
 	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported kind", "kind": kind})
 		return
 	}
+	namespace := resolveNamespace(c.Param("namespace"), entry)
 
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
@@ -132,7 +159,7 @@ func UpdateClusterResourceYAML(c *gin.Context) {
 	}
 
 	// Get existing object purely to read its current resourceVersion.
-	existing, err := dyn.Resource(gvr).Namespace(namespace).Get(c.Request.Context(), name, metav1.GetOptions{})
+	existing, err := dyn.Resource(entry.GVR).Namespace(namespace).Get(c.Request.Context(), name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "resource not found"})
@@ -157,7 +184,7 @@ func UpdateClusterResourceYAML(c *gin.Context) {
 	updated := existing.DeepCopy()
 	updated.SetUnstructuredContent(m)
 
-	out, err := dyn.Resource(gvr).Namespace(namespace).Update(c.Request.Context(), updated, metav1.UpdateOptions{})
+	out, err := dyn.Resource(entry.GVR).Namespace(namespace).Update(c.Request.Context(), updated, metav1.UpdateOptions{})
 	if err != nil {
 		if apierrors.IsConflict(err) {
 			c.JSON(http.StatusConflict, gin.H{"error": "resource changed since you opened it; reload and re-edit", "details": err.Error()})

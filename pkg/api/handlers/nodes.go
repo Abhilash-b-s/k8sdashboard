@@ -235,9 +235,14 @@ func toNodeInfo(node *corev1.Node) NodeInfo {
 	}
 }
 
+// toPodInfo computes a row's display fields the way `kubectl get pods` does:
+// init container states, main container waiting/terminated reasons, and the
+// pod's deletionTimestamp all override the raw Status.Phase. This is what
+// surfaces ContainerCreating / Terminating / CrashLoopBackOff / ImagePullBackOff
+// / Init:N/M etc. instead of just Pending|Running|Succeeded|Failed|Unknown.
 func toPodInfo(pod *corev1.Pod) PodInfo {
-	readyContainers := 0
 	totalContainers := len(pod.Spec.Containers)
+	readyContainers := 0
 	var restarts int32 = 0
 	for _, cs := range pod.Status.ContainerStatuses {
 		if cs.Ready {
@@ -246,13 +251,89 @@ func toPodInfo(pod *corev1.Pod) PodInfo {
 		restarts += cs.RestartCount
 	}
 
+	reason := string(pod.Status.Phase)
+	if pod.Status.Reason != "" {
+		reason = pod.Status.Reason
+	}
+
+	// Init container state takes precedence over main container state.
+	initializing := false
+	for i, ic := range pod.Status.InitContainerStatuses {
+		switch {
+		case ic.State.Terminated != nil && ic.State.Terminated.ExitCode == 0:
+			continue
+		case ic.State.Terminated != nil:
+			if ic.State.Terminated.Reason != "" {
+				reason = "Init:" + ic.State.Terminated.Reason
+			} else if ic.State.Terminated.Signal != 0 {
+				reason = fmt.Sprintf("Init:Signal:%d", ic.State.Terminated.Signal)
+			} else {
+				reason = fmt.Sprintf("Init:ExitCode:%d", ic.State.Terminated.ExitCode)
+			}
+			initializing = true
+		case ic.State.Waiting != nil && ic.State.Waiting.Reason != "" && ic.State.Waiting.Reason != "PodInitializing":
+			reason = "Init:" + ic.State.Waiting.Reason
+			initializing = true
+		default:
+			reason = fmt.Sprintf("Init:%d/%d", i, len(pod.Spec.InitContainers))
+			initializing = true
+		}
+		break
+	}
+
+	if !initializing {
+		hasRunning := false
+		for i := len(pod.Status.ContainerStatuses) - 1; i >= 0; i-- {
+			cs := pod.Status.ContainerStatuses[i]
+			switch {
+			case cs.State.Waiting != nil && cs.State.Waiting.Reason != "":
+				reason = cs.State.Waiting.Reason
+			case cs.State.Terminated != nil && cs.State.Terminated.Reason != "":
+				reason = cs.State.Terminated.Reason
+			case cs.State.Terminated != nil:
+				if cs.State.Terminated.Signal != 0 {
+					reason = fmt.Sprintf("Signal:%d", cs.State.Terminated.Signal)
+				} else {
+					reason = fmt.Sprintf("ExitCode:%d", cs.State.Terminated.ExitCode)
+				}
+			case cs.Ready && cs.State.Running != nil:
+				hasRunning = true
+			}
+		}
+		// "Completed" with at least one container still running means the
+		// pod's still alive — re-classify based on the Ready condition.
+		if reason == "Completed" && hasRunning {
+			if hasPodReadyCondition(pod.Status.Conditions) {
+				reason = "Running"
+			} else {
+				reason = "NotReady"
+			}
+		}
+	}
+
+	// Deletion always wins.
+	if pod.DeletionTimestamp != nil && pod.Status.Reason == "NodeLost" {
+		reason = "Unknown"
+	} else if pod.DeletionTimestamp != nil {
+		reason = "Terminating"
+	}
+
 	return PodInfo{
 		Name:      pod.Name,
 		Namespace: pod.Namespace,
-		Status:    string(pod.Status.Phase),
+		Status:    reason,
 		Ready:     fmt.Sprintf("%d/%d", readyContainers, totalContainers),
 		Restarts:  restarts,
 		Age:       FormatAge(pod.CreationTimestamp.Time),
 		Node:      pod.Spec.NodeName,
 	}
+}
+
+func hasPodReadyCondition(conds []corev1.PodCondition) bool {
+	for _, c := range conds {
+		if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
 }

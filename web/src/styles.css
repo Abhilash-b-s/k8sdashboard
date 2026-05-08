@@ -123,6 +123,60 @@ svg.lucide {
   background: color-mix(in srgb, #fb923c 12%, transparent);
 }
 
+/* Coming up (ContainerCreating, PodInitializing, Init:N/M) — cyan */
+.status-creating {
+  color: #22d3ee;
+  background: color-mix(in srgb, #22d3ee 12%, transparent);
+}
+
+/* Image / pull / config errors — red (these block container start, treat as failure) */
+.status-imageerror {
+  color: #f87171;
+  background: color-mix(in srgb, #f87171 14%, transparent);
+}
+
+/* Spinning icon used inside in-progress status pills */
+@keyframes status-spin {
+  to { transform: rotate(360deg); }
+}
+[class*="status-"] .status-spin {
+  animation: status-spin 1s linear infinite;
+  width: 11px;
+  height: 11px;
+  stroke-width: 2.25;
+  display: inline-block;
+  vertical-align: -1px;
+}
+
+/* When the pill carries an icon, suppress the dot ::before so we don't show both */
+[class*="status-"].has-icon::before {
+  display: none;
+}
+
+/* CrashLoopBackOff — bright red */
+.status-crashloop {
+  color: #f87171;
+  background: color-mix(in srgb, #f87171 16%, transparent);
+}
+
+/* OOMKilled — deep red */
+.status-oomkilled {
+  color: #dc2626;
+  background: color-mix(in srgb, #dc2626 14%, transparent);
+}
+
+/* NotReady — rose (degraded but not crashing) */
+.status-notready {
+  color: #fb7185;
+  background: color-mix(in srgb, #fb7185 12%, transparent);
+}
+
+/* Unknown / NodeLost / fallback — slate */
+.status-unknown {
+  color: #94a3b8;
+  background: color-mix(in srgb, #94a3b8 12%, transparent);
+}
+
 /* Skeleton loaders */
 @keyframes skeleton-shimmer {
   0% { background-position: -400px 0; }
@@ -333,12 +387,29 @@ svg.lucide {
   font-variant-numeric: tabular-nums;
 }
 
-.breadcrumb { color: rgba(255, 255, 255, 0.9); }
-.breadcrumb .breadcrumb-category { color: rgba(255, 255, 255, 0.75); font-weight: 500; }
-.breadcrumb .breadcrumb-separator { color: rgba(255, 255, 255, 0.5); margin: 0 8px; }
+.breadcrumb { color: #cbd5e1; }
+.breadcrumb .breadcrumb-category { color: #94a3b8; font-weight: 500; }
+.breadcrumb .breadcrumb-separator { color: #64748b; margin: 0 8px; }
 .breadcrumb .breadcrumb-current { color: #ffffff; font-weight: 600; }
-.breadcrumb a { color: rgba(255, 255, 255, 0.85); font-weight: 500; }
+.breadcrumb a { color: #cbd5e1; font-weight: 500; }
 .breadcrumb a:hover { color: #ffffff; text-decoration: underline; }
+
+/* Subtle k8s-blue accent strip under the header — keeps the brand color
+   present without making the whole header bright blue. */
+#app-header {
+  position: relative;
+}
+#app-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, #326ce5 35%, #326ce5 65%, transparent 100%);
+  opacity: 0.35;
+  pointer-events: none;
+}
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: #1e293b; }
@@ -416,15 +487,21 @@ svg.lucide {
 .light .percentage { fill: #1e293b !important; }
 .light .circle-bg { stroke: #cbd5e1 !important; }
 
-.light .breadcrumb { color: #ffffff; }
-.light .breadcrumb .breadcrumb-category { color: rgba(255, 255, 255, 0.8); }
-.light .breadcrumb .breadcrumb-separator { color: rgba(255, 255, 255, 0.6); }
-.light .breadcrumb .breadcrumb-current { color: #ffffff; }
-.light .breadcrumb a { color: rgba(255, 255, 255, 0.9); }
-.light .breadcrumb a:hover { color: #ffffff; }
+/* Light-mode breadcrumb on the new white-ish header */
+.light .breadcrumb { color: #475569; }
+.light .breadcrumb .breadcrumb-category { color: #64748b; }
+.light .breadcrumb .breadcrumb-separator { color: #94a3b8; }
+.light .breadcrumb .breadcrumb-current { color: #0f172a; }
+.light .breadcrumb a { color: #475569; }
+.light .breadcrumb a:hover { color: #0f172a; }
 
-.light .bg-k8s-blue .text-white { color: #ffffff !important; }
-.light .bg-k8s-blue .text-slate-300 { color: rgba(255, 255, 255, 0.8) !important; }
-.light .bg-k8s-blue svg { color: #ffffff !important; }
+/* In light mode, header matches the white sidebar */
+.light #app-header {
+  background-color: #ffffff !important;
+  border-bottom-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+.light #app-header .text-slate-300 { color: #475569 !important; }
+.light #app-header button:hover { background-color: #f1f5f9 !important; }
 
 .light .bg-slate-800 .text-sm { color: #1e293b !important; }

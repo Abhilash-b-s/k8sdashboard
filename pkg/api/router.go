@@ -172,6 +172,10 @@ func SetupRouter() *gin.Engine {
 			// Generic YAML edit (kubectl-edit-style) for any supported kind
 			cluster.GET("/yaml/:kind/:namespace/:name", handlers.GetClusterResourceYAML)
 			cluster.PUT("/yaml/:kind/:namespace/:name", handlers.UpdateClusterResourceYAML)
+
+			// Longhorn Volumes (CRD; tries v1beta2 then v1beta1 transparently)
+			cluster.GET("/longhornvolumes", handlers.GetClusterLonghornVolumes)
+			cluster.GET("/longhornvolumes/:namespace/:name", handlers.GetClusterLonghornVolumeDetail)
 		}
 
 		// ============================================
