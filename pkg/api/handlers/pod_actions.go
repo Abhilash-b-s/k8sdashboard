@@ -120,6 +120,54 @@ func RestartDeployment(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Deployment restart triggered"})
 }
 
+// DeleteDaemonSet deletes a daemonset
+func DeleteDaemonSet(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+
+	err := k8s.Clientset.AppsV1().DaemonSets(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   err.Error(),
+			"message": "Failed to delete daemonset",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "DaemonSet deleted successfully",
+		"namespace": namespace,
+		"name":      name,
+	})
+}
+
+// DeleteReplicaSet deletes a replicaset
+func DeleteReplicaSet(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+
+	err := k8s.Clientset.AppsV1().ReplicaSets(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   err.Error(),
+			"message": "Failed to delete replicaset",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "ReplicaSet deleted successfully",
+		"namespace": namespace,
+		"name":      name,
+	})
+}
+
 // DeleteStatefulSet deletes a statefulset
 func DeleteStatefulSet(c *gin.Context) {
 	if !checkLegacyClientAvailable(c) {

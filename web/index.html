@@ -1879,6 +1879,34 @@
             }
         }
 
+        async function deleteDaemonSet(namespace, name) {
+            if (!confirm(`Delete daemonset "${name}" in namespace "${namespace}"? This will also delete all pods managed by this daemonset.`)) return;
+            try {
+                const res = await fetch(`${getClusterAPI()}/daemonsets/${namespace}/${name}`, { method: 'DELETE' });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || `HTTP ${res.status}`);
+                }
+                refreshCurrentView();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function deleteReplicaSet(namespace, name) {
+            if (!confirm(`Delete replicaset "${name}" in namespace "${namespace}"?\n\nNote: if a Deployment owns this ReplicaSet, the controller will recreate it.`)) return;
+            try {
+                const res = await fetch(`${getClusterAPI()}/replicasets/${namespace}/${name}`, { method: 'DELETE' });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || `HTTP ${res.status}`);
+                }
+                refreshCurrentView();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
         // Edit functions
         // ============================================
         // Generic YAML resource editor (kubectl-edit equivalent)
@@ -2008,11 +2036,15 @@
             content.innerHTML = `
                 <div class="mb-4">
                     <h1 class="text-xl font-bold mb-4">Pod Logs</h1>
-                    <div class="flex items-center space-x-4 mb-4">
+                    <div class="flex items-center flex-wrap gap-4 mb-4">
                         <input type="text" id="log-namespace" placeholder="Namespace" value="${detail?.namespace || ''}"
                             class="bg-slate-700 border border-slate-600 rounded px-3 py-2 w-48">
                         <input type="text" id="log-pod" placeholder="Pod name" value="${detail?.pod || ''}"
                             class="bg-slate-700 border border-slate-600 rounded px-3 py-2 w-64">
+                        <select id="log-container" onchange="onLogContainerChange()"
+                            class="bg-slate-700 border border-slate-600 rounded px-3 py-2 w-56" disabled>
+                            <option value="">All containers</option>
+                        </select>
                         <button onclick="startLogStream()" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded">
                             <i class="fas fa-play mr-2"></i>Stream
                         </button>
@@ -2029,8 +2061,45 @@
                 </div>
             `;
             if (detail?.namespace && detail?.pod) {
-                setTimeout(startLogStream, 100);
+                loadLogContainers(detail.namespace, detail.pod);
             }
+        }
+
+        async function loadLogContainers(namespace, pod) {
+            const select = document.getElementById('log-container');
+            if (!select) return;
+            try {
+                const data = await fetchAPI(`${getClusterAPI()}/pods/${namespace}/${pod}`);
+                const containers = data.containers || [];
+                const initContainers = data.initContainers || [];
+                if (containers.length === 0 && initContainers.length === 0) {
+                    select.disabled = true;
+                    setTimeout(startLogStream, 50);
+                    return;
+                }
+                const opts = [];
+                containers.forEach(ct => {
+                    opts.push(`<option value="${ct.name}">${ct.name}</option>`);
+                });
+                initContainers.forEach(ct => {
+                    opts.push(`<option value="${ct.name}">${ct.name} (init)</option>`);
+                });
+                select.innerHTML = opts.join('');
+                select.disabled = containers.length + initContainers.length <= 1;
+                // Default to the first regular container (kubectl-style default)
+                select.value = containers[0]?.name || initContainers[0]?.name || '';
+                setTimeout(startLogStream, 50);
+            } catch (err) {
+                // Fall back to streaming without specifying a container — works for single-container pods.
+                select.disabled = true;
+                setTimeout(startLogStream, 50);
+            }
+        }
+
+        function onLogContainerChange() {
+            const ns = document.getElementById('log-namespace')?.value;
+            const pod = document.getElementById('log-pod')?.value;
+            if (ns && pod) startLogStream();
         }
 
         function startLogStream() {
@@ -2041,10 +2110,13 @@
                 alert('Please enter namespace and pod name');
                 return;
             }
+            const container = document.getElementById('log-container')?.value || '';
             const logOutput = document.getElementById('log-output');
             logOutput.innerHTML = '<p class="text-slate-500">Connecting...</p>';
 
-            eventSource = new EventSource(`${getClusterAPI()}/logs/${namespace}/${pod}`);
+            const url = `${getClusterAPI()}/logs/${namespace}/${pod}` +
+                (container ? `?container=${encodeURIComponent(container)}` : '');
+            eventSource = new EventSource(url);
             eventSource.addEventListener('log', (e) => {
                 if (logOutput.querySelector('.text-slate-500')) logOutput.innerHTML = '';
                 const line = document.createElement('div');
@@ -2212,7 +2284,7 @@
                     </div>
                     <div class="bg-slate-800 rounded-lg border border-slate-700">
                         ${renderTable([
-                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('daemonsets', '${r.namespace}', '${r.name}')">${r.name}</span>` },
                     { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
                     { label: 'Desired', key: 'desired' },
                     { label: 'Current', key: 'current' },
@@ -2220,7 +2292,10 @@
                     { label: 'Up-to-date', key: 'upToDate' },
                     { label: 'Available', key: 'available' },
                     { label: 'Age', key: 'age', class: 'text-slate-400' }
-                ], getItems(data), r => editBtnHTML('daemonsets', r.namespace, r.name))}
+                ], getItems(data), r => `
+                    ${editBtnHTML('daemonsets', r.namespace, r.name)}
+                    <button onclick="deleteDaemonSet('${r.namespace}', '${r.name}')" class="text-red-400 hover:text-red-300 ml-2" title="Delete"><i class="fas fa-trash"></i></button>
+                `)}
                     </div>
                 `;
             } catch (err) {
@@ -2235,7 +2310,7 @@
                 title: 'Stateful Sets',
                 namespaceFilter: true,
                 columns: [
-                    { label: 'Name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('statefulsets', '${r.namespace}', '${r.name}')">${r.name}</span>` },
                     { label: 'Namespace', class: 'cell-namespace', render: r => r.namespace || '' },
                     { label: 'Ready', render: r => r.ready || '' },
                     { label: 'Age', class: 'text-slate-400', render: r => r.age || '' },
@@ -2267,7 +2342,10 @@
                     { label: 'Current', key: 'current' },
                     { label: 'Ready', key: 'ready' },
                     { label: 'Age', key: 'age', class: 'text-slate-400' }
-                ], getItems(data), r => editBtnHTML('replicasets', r.namespace, r.name))}
+                ], getItems(data), r => `
+                    ${editBtnHTML('replicasets', r.namespace, r.name)}
+                    <button onclick="deleteReplicaSet('${r.namespace}', '${r.name}')" class="text-red-400 hover:text-red-300 ml-2" title="Delete"><i class="fas fa-trash"></i></button>
+                `)}
                     </div>
                 `;
             } catch (err) {

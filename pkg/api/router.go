@@ -89,6 +89,7 @@ func SetupRouter() *gin.Engine {
 			// Workloads - DaemonSets
 			cluster.GET("/daemonsets", handlers.GetClusterDaemonSets)
 			cluster.GET("/daemonsets/:namespace/:name", handlers.GetClusterDaemonSetDetail)
+			cluster.DELETE("/daemonsets/:namespace/:name", handlers.DeleteClusterDaemonSet)
 
 			// Workloads - StatefulSets
 			cluster.GET("/statefulsets", handlers.GetClusterStatefulSets)
@@ -100,6 +101,7 @@ func SetupRouter() *gin.Engine {
 			// Workloads - ReplicaSets
 			cluster.GET("/replicasets", handlers.GetClusterReplicaSets)
 			cluster.GET("/replicasets/:namespace/:name", handlers.GetClusterReplicaSetDetail)
+			cluster.DELETE("/replicasets/:namespace/:name", handlers.DeleteClusterReplicaSet)
 
 			// Workloads - Jobs
 			cluster.GET("/jobs", handlers.GetClusterJobs)
@@ -207,6 +209,7 @@ func SetupRouter() *gin.Engine {
 		// Workloads - DaemonSets
 		api.GET("/daemonsets", handlers.GetDaemonSets)
 		api.GET("/daemonsets/:namespace/:name", handlers.GetDaemonSetDetail)
+		api.DELETE("/daemonsets/:namespace/:name", handlers.DeleteDaemonSet)
 
 		// Workloads - StatefulSets
 		api.GET("/statefulsets", handlers.GetStatefulSets)
@@ -218,6 +221,7 @@ func SetupRouter() *gin.Engine {
 		// Workloads - ReplicaSets
 		api.GET("/replicasets", handlers.GetReplicaSets)
 		api.GET("/replicasets/:namespace/:name", handlers.GetReplicaSetDetail)
+		api.DELETE("/replicasets/:namespace/:name", handlers.DeleteReplicaSet)
 
 		// Workloads - Jobs
 		api.GET("/jobs", handlers.GetJobs)

@@ -852,6 +852,25 @@ func GetClusterDaemonSetDetail(c *gin.Context) {
 	c.JSON(http.StatusOK, ds)
 }
 
+func DeleteClusterDaemonSet(c *gin.Context) {
+	client := GetClusterClient(c)
+	if client == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "cluster client not found"})
+		return
+	}
+
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+
+	err := client.Clientset.AppsV1().DaemonSets(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "DaemonSet deleted", "name": name})
+}
+
 // ============================================
 // STATEFULSET HANDLERS
 // ============================================
@@ -1048,6 +1067,25 @@ func GetClusterReplicaSetDetail(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, rs)
+}
+
+func DeleteClusterReplicaSet(c *gin.Context) {
+	client := GetClusterClient(c)
+	if client == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "cluster client not found"})
+		return
+	}
+
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+
+	err := client.Clientset.AppsV1().ReplicaSets(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "ReplicaSet deleted", "name": name})
 }
 
 // ============================================

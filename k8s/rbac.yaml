@@ -47,6 +47,8 @@ rules:
     resources:
       - deployments
       - statefulsets
+      - daemonsets
+      - replicasets
     verbs: ["delete", "update", "patch"]
   - apiGroups: ["apps"]
     resources:
