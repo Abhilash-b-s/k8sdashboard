@@ -64,7 +64,7 @@ When you add a new endpoint, add it to **both** trees. The legacy handlers live 
 ### YAML editing and CRDs
 
 - `yaml_edit.go` implements a generic kubectl-edit-style `GET/PUT /yaml/:kind/:namespace/:name` that switches over kind to choose the right typed client.
-- Longhorn volumes (`longhorn.go`) are accessed via the dynamic client, attempting `v1beta2` then falling back to `v1beta1`. Use the same pattern for any other CRD.
+- Kinds without a typed handler (and any CRD's custom resources) are listed by `GetClusterGenericResources` (`generic_resources.go`), which asks the API server for its Table rendering. Register new kinds in `kindToGVR` (`yaml_edit.go`) and in `GENERIC_VIEWS` in `web/index.html`; custom resources use the `cr:<group>:<version>:<resource>:<n|c>` kind string.
 
 ### Frontend
 

@@ -2,11 +2,15 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"time"
 	"k8s-dashboard/pkg/k8s"
 
 	"github.com/gin-gonic/gin"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // DeletePod terminates a pod
@@ -118,6 +122,43 @@ func RestartDeployment(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Deployment restart triggered"})
+}
+
+// restartPatch builds the strategic-merge patch `kubectl rollout restart` applies.
+func restartPatch() []byte {
+	return []byte(fmt.Sprintf(`{"spec":{"template":{"metadata":{"annotations":{"kubectl.kubernetes.io/restartedAt":%q}}}}}`, time.Now().Format(time.RFC3339)))
+}
+
+// respondRestart writes the JSON result of a restart patch.
+func respondRestart(c *gin.Context, kind, name string, err error) {
+	switch {
+	case apierrors.IsNotFound(err):
+		c.JSON(http.StatusNotFound, gin.H{"error": kind + " not found"})
+	case err != nil:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	default:
+		c.JSON(http.StatusOK, gin.H{"message": kind + " restarted", "name": name})
+	}
+}
+
+// RestartStatefulSet restarts a statefulset's pods (rolling)
+func RestartStatefulSet(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
+	name := c.Param("name")
+	_, err := k8s.Clientset.AppsV1().StatefulSets(c.Param("namespace")).Patch(context.Background(), name, types.StrategicMergePatchType, restartPatch(), metav1.PatchOptions{})
+	respondRestart(c, "StatefulSet", name, err)
+}
+
+// RestartDaemonSet restarts a daemonset's pods (rolling)
+func RestartDaemonSet(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
+	name := c.Param("name")
+	_, err := k8s.Clientset.AppsV1().DaemonSets(c.Param("namespace")).Patch(context.Background(), name, types.StrategicMergePatchType, restartPatch(), metav1.PatchOptions{})
+	respondRestart(c, "DaemonSet", name, err)
 }
 
 // DeleteDaemonSet deletes a daemonset

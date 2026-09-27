@@ -92,6 +92,12 @@ rules:
       - nodes
       - pods
     verbs: ["get", "list"]
+  # Read-only access to every other kind, including custom resources of any
+  # CRD (Custom Resources view), quotas, PDBs, webhooks, leases, etc.
+  # Also lets the Helm view list releases (stored as Secrets).
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

@@ -90,6 +90,7 @@ func SetupRouter() *gin.Engine {
 			cluster.GET("/daemonsets", handlers.GetClusterDaemonSets)
 			cluster.GET("/daemonsets/:namespace/:name", handlers.GetClusterDaemonSetDetail)
 			cluster.DELETE("/daemonsets/:namespace/:name", handlers.DeleteClusterDaemonSet)
+			cluster.POST("/daemonsets/:namespace/:name/restart", handlers.RestartClusterDaemonSet)
 
 			// Workloads - StatefulSets
 			cluster.GET("/statefulsets", handlers.GetClusterStatefulSets)
@@ -97,6 +98,7 @@ func SetupRouter() *gin.Engine {
 			cluster.PUT("/statefulsets/:namespace/:name", handlers.UpdateClusterStatefulSet)
 			cluster.DELETE("/statefulsets/:namespace/:name", handlers.DeleteClusterStatefulSet)
 			cluster.PUT("/statefulsets/:namespace/:name/scale", handlers.ScaleClusterStatefulSet)
+			cluster.POST("/statefulsets/:namespace/:name/restart", handlers.RestartClusterStatefulSet)
 
 			// Workloads - ReplicaSets
 			cluster.GET("/replicasets", handlers.GetClusterReplicaSets)
@@ -175,9 +177,15 @@ func SetupRouter() *gin.Engine {
 			cluster.GET("/yaml/:kind/:namespace/:name", handlers.GetClusterResourceYAML)
 			cluster.PUT("/yaml/:kind/:namespace/:name", handlers.UpdateClusterResourceYAML)
 
-			// Longhorn Volumes (CRD; tries v1beta2 then v1beta1 transparently)
-			cluster.GET("/longhornvolumes", handlers.GetClusterLonghornVolumes)
-			cluster.GET("/longhornvolumes/:namespace/:name", handlers.GetClusterLonghornVolumeDetail)
+			// Generic list (server-side Table) for kinds without a typed handler,
+			// including custom resources ("cr:<group>:<version>:<resource>:<n|c>")
+			cluster.GET("/resources/:kind", handlers.GetClusterGenericResources)
+
+			// Helm releases
+			cluster.GET("/helm/releases", handlers.GetClusterHelmReleases)
+			cluster.GET("/helm/releases/:namespace/:name", handlers.GetClusterHelmReleaseDetail)
+			cluster.POST("/helm/releases/:namespace/:name/rollback", handlers.RollbackClusterHelmRelease)
+			cluster.DELETE("/helm/releases/:namespace/:name", handlers.UninstallClusterHelmRelease)
 		}
 
 		// ============================================
@@ -210,6 +218,7 @@ func SetupRouter() *gin.Engine {
 		api.GET("/daemonsets", handlers.GetDaemonSets)
 		api.GET("/daemonsets/:namespace/:name", handlers.GetDaemonSetDetail)
 		api.DELETE("/daemonsets/:namespace/:name", handlers.DeleteDaemonSet)
+		api.POST("/daemonsets/:namespace/:name/restart", handlers.RestartDaemonSet)
 
 		// Workloads - StatefulSets
 		api.GET("/statefulsets", handlers.GetStatefulSets)
@@ -217,6 +226,7 @@ func SetupRouter() *gin.Engine {
 		api.PUT("/statefulsets/:namespace/:name", handlers.UpdateStatefulSet)
 		api.DELETE("/statefulsets/:namespace/:name", handlers.DeleteStatefulSet)
 		api.PUT("/statefulsets/:namespace/:name/scale", handlers.ScaleStatefulSet)
+		api.POST("/statefulsets/:namespace/:name/restart", handlers.RestartStatefulSet)
 
 		// Workloads - ReplicaSets
 		api.GET("/replicasets", handlers.GetReplicaSets)

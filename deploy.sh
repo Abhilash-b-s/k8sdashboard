@@ -119,6 +119,11 @@ deploy_k8s() {
         kubectl apply -f "${K8S_DIR}/deployment.yaml"
     fi
 
+    if [ -f "${K8S_DIR}/ingress.yaml" ]; then
+        print_msg "$YELLOW" "Creating ingress..."
+        kubectl apply -f "${K8S_DIR}/ingress.yaml"
+    fi
+
     print_msg "$GREEN" "Kubernetes resources applied successfully"
 
     # Force rollout restart to ensure new pods are created with latest image

@@ -51,6 +51,14 @@ table {
   line-height: 1.55;
 }
 
+/* High-contrast code/YAML/log blocks (matches the YAML editor theme in
+   web/src/main.js). !important so the .light overrides don't grey them out. */
+.code-block {
+  background-color: #000 !important;
+  color: #fff !important;
+  border: 1px solid #262626 !important;
+}
+
 kbd {
   display: inline-flex;
   align-items: center;
@@ -245,6 +253,13 @@ button:disabled {
 #detail-modal:not(.hidden) > div {
   transform: translateX(0);
 }
+/* Dark theme drawer: black panel, near-black cards, white headings (no cyan). */
+body:not(.light) #detail-modal > div,
+body:not(.light) #detail-modal .bg-slate-800 { background-color: #000 !important; }
+body:not(.light) #detail-modal .border-slate-700 { border-color: #262626 !important; }
+body:not(.light) #detail-modal .bg-slate-700 { background-color: #111 !important; border: 1px solid #262626; }
+body:not(.light) #detail-modal .bg-slate-600 { background-color: #262626 !important; }
+body:not(.light) #detail-modal .text-k8s-blue { color: #fff !important; }
 #detail-modal #modal-content {
   max-height: none !important;
   flex: 1 1 0;
@@ -494,7 +509,7 @@ button:disabled {
 .light #detail-modal .text-green-400 { color: #16a34a !important; }
 :not(.light) .text-k8s-blue { color: #22d3ee !important; }
 .light #detail-modal .text-red-400 { color: #dc2626 !important; }
-.light #detail-modal pre { background-color: #e2e8f0 !important; color: #334155 !important; }
+.light #detail-modal pre:not(.code-block) { background-color: #e2e8f0 !important; color: #334155 !important; }
 .light #detail-modal .bg-green-600 { background-color: #16a34a !important; }
 .light #detail-modal .bg-red-600 { background-color: #dc2626 !important; }
 .light .table-header th { color: #1e293b !important; }

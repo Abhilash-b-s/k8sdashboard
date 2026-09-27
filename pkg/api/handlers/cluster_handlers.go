@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // ============================================
@@ -852,6 +853,17 @@ func GetClusterDaemonSetDetail(c *gin.Context) {
 	c.JSON(http.StatusOK, ds)
 }
 
+func RestartClusterDaemonSet(c *gin.Context) {
+	client := GetClusterClient(c)
+	if client == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "cluster client not found"})
+		return
+	}
+	name := c.Param("name")
+	_, err := client.Clientset.AppsV1().DaemonSets(c.Param("namespace")).Patch(context.Background(), name, types.StrategicMergePatchType, restartPatch(), metav1.PatchOptions{})
+	respondRestart(c, "DaemonSet", name, err)
+}
+
 func DeleteClusterDaemonSet(c *gin.Context) {
 	client := GetClusterClient(c)
 	if client == nil {
@@ -980,6 +992,17 @@ func DeleteClusterStatefulSet(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "StatefulSet deleted", "name": name})
+}
+
+func RestartClusterStatefulSet(c *gin.Context) {
+	client := GetClusterClient(c)
+	if client == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "cluster client not found"})
+		return
+	}
+	name := c.Param("name")
+	_, err := client.Clientset.AppsV1().StatefulSets(c.Param("namespace")).Patch(context.Background(), name, types.StrategicMergePatchType, restartPatch(), metav1.PatchOptions{})
+	respondRestart(c, "StatefulSet", name, err)
 }
 
 func ScaleClusterStatefulSet(c *gin.Context) {

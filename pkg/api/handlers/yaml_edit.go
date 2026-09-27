@@ -3,6 +3,7 @@ package handlers
 import (
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -37,8 +38,42 @@ var kindToGVR = map[string]kindEntry{
 	"namespaces":          {GVR: schema.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}, ClusterScoped: true},
 	"persistentvolumes":   {GVR: schema.GroupVersionResource{Group: "", Version: "v1", Resource: "persistentvolumes"}, ClusterScoped: true},
 	"storageclasses":      {GVR: schema.GroupVersionResource{Group: "storage.k8s.io", Version: "v1", Resource: "storageclasses"}, ClusterScoped: true},
-	// Longhorn — namespaced; uses v1beta2 in current Longhorn (1.3+).
-	"longhornvolumes": {GVR: schema.GroupVersionResource{Group: "longhorn.io", Version: "v1beta2", Resource: "volumes"}},
+	// Kinds without a typed handler; listed via GetClusterGenericResources.
+	"endpoints":                       {GVR: schema.GroupVersionResource{Group: "", Version: "v1", Resource: "endpoints"}},
+	"endpointslices":                  {GVR: schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1", Resource: "endpointslices"}},
+	"resourcequotas":                  {GVR: schema.GroupVersionResource{Group: "", Version: "v1", Resource: "resourcequotas"}},
+	"limitranges":                     {GVR: schema.GroupVersionResource{Group: "", Version: "v1", Resource: "limitranges"}},
+	"poddisruptionbudgets":            {GVR: schema.GroupVersionResource{Group: "policy", Version: "v1", Resource: "poddisruptionbudgets"}},
+	"leases":                          {GVR: schema.GroupVersionResource{Group: "coordination.k8s.io", Version: "v1", Resource: "leases"}},
+	"priorityclasses":                 {GVR: schema.GroupVersionResource{Group: "scheduling.k8s.io", Version: "v1", Resource: "priorityclasses"}, ClusterScoped: true},
+	"runtimeclasses":                  {GVR: schema.GroupVersionResource{Group: "node.k8s.io", Version: "v1", Resource: "runtimeclasses"}, ClusterScoped: true},
+	"mutatingwebhookconfigurations":   {GVR: schema.GroupVersionResource{Group: "admissionregistration.k8s.io", Version: "v1", Resource: "mutatingwebhookconfigurations"}, ClusterScoped: true},
+	"validatingwebhookconfigurations": {GVR: schema.GroupVersionResource{Group: "admissionregistration.k8s.io", Version: "v1", Resource: "validatingwebhookconfigurations"}, ClusterScoped: true},
+	"csidrivers":                      {GVR: schema.GroupVersionResource{Group: "storage.k8s.io", Version: "v1", Resource: "csidrivers"}, ClusterScoped: true},
+	"volumeattachments":               {GVR: schema.GroupVersionResource{Group: "storage.k8s.io", Version: "v1", Resource: "volumeattachments"}, ClusterScoped: true},
+	"customresourcedefinitions":       {GVR: schema.GroupVersionResource{Group: "apiextensions.k8s.io", Version: "v1", Resource: "customresourcedefinitions"}, ClusterScoped: true},
+}
+
+// lookupKind resolves the URL :kind segment. Besides the static map it accepts
+// custom resources encoded as "cr:<group>:<version>:<resource>:<n|c>"
+// (n = namespaced, c = cluster-scoped), as produced by crKind.
+func lookupKind(kind string) (kindEntry, bool) {
+	if e, ok := kindToGVR[kind]; ok {
+		return e, true
+	}
+	p := strings.Split(kind, ":")
+	if len(p) != 5 || p[0] != "cr" || p[2] == "" || p[3] == "" || (p[4] != "n" && p[4] != "c") {
+		return kindEntry{}, false
+	}
+	return kindEntry{GVR: schema.GroupVersionResource{Group: p[1], Version: p[2], Resource: p[3]}, ClusterScoped: p[4] == "c"}, true
+}
+
+func crKind(gvr schema.GroupVersionResource, clusterScoped bool) string {
+	scope := "n"
+	if clusterScoped {
+		scope = "c"
+	}
+	return strings.Join([]string{"cr", gvr.Group, gvr.Version, gvr.Resource, scope}, ":")
 }
 
 // resolveNamespace normalizes the URL :namespace segment. Cluster-scoped
@@ -79,7 +114,7 @@ func GetClusterResourceYAML(c *gin.Context) {
 	kind := c.Param("kind")
 	name := c.Param("name")
 
-	entry, ok := kindToGVR[kind]
+	entry, ok := lookupKind(kind)
 	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported kind", "kind": kind})
 		return
@@ -127,7 +162,7 @@ func UpdateClusterResourceYAML(c *gin.Context) {
 	kind := c.Param("kind")
 	name := c.Param("name")
 
-	entry, ok := kindToGVR[kind]
+	entry, ok := lookupKind(kind)
 	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported kind", "kind": kind})
 		return

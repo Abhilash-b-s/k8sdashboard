@@ -14,7 +14,7 @@
 <body class="bg-slate-900 text-slate-200 min-h-screen">
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
-        <aside id="sidebar" class="w-64 bg-slate-800 border-r border-slate-700 flex flex-col overflow-y-auto">
+        <aside id="sidebar" class="w-64 bg-black border-r border-slate-800 flex flex-col overflow-y-auto">
             <!-- Logo -->
             <div class="p-4 border-b border-slate-700 flex items-center space-x-3">
                 <svg class="w-8 h-8" viewBox="0 0 32 32" fill="none">
@@ -112,6 +112,11 @@
                                 <i class="fas fa-clock w-4 text-center text-slate-400"></i>
                                 <span>Cron Jobs</span>
                             </button></li>
+                        <li><button onclick="navigate('poddisruptionbudgets')" data-nav="poddisruptionbudgets"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-heartbeat w-4 text-center text-slate-400"></i>
+                                <span>Pod Disruption Budgets</span>
+                            </button></li>
                     </ul>
                 </div>
 
@@ -140,6 +145,16 @@
                                 class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
                                 <i class="fas fa-network-wired w-4 text-center text-slate-400"></i>
                                 <span>Services</span>
+                            </button></li>
+                        <li><button onclick="navigate('endpoints')" data-nav="endpoints"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-crosshairs w-4 text-center text-slate-400"></i>
+                                <span>Endpoints</span>
+                            </button></li>
+                        <li><button onclick="navigate('endpointslices')" data-nav="endpointslices"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-code-branch w-4 text-center text-slate-400"></i>
+                                <span>Endpoint Slices</span>
                             </button></li>
                     </ul>
                 </div>
@@ -175,15 +190,30 @@
                                 <i class="fas fa-layer-group w-4 text-center text-slate-400"></i>
                                 <span>Storage Classes</span>
                             </button></li>
-                        <li><button onclick="navigate('longhornvolumes')" data-nav="longhornvolumes"
-                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
-                                <i class="fas fa-hdd w-4 text-center text-slate-400"></i>
-                                <span>Longhorn Volumes</span>
-                            </button></li>
                         <li><button onclick="navigate('serviceaccounts')" data-nav="serviceaccounts"
                                 class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
                                 <i class="fas fa-user-cog w-4 text-center text-slate-400"></i>
                                 <span>Service Accounts</span>
+                            </button></li>
+                        <li><button onclick="navigate('resourcequotas')" data-nav="resourcequotas"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-tachometer-alt w-4 text-center text-slate-400"></i>
+                                <span>Resource Quotas</span>
+                            </button></li>
+                        <li><button onclick="navigate('limitranges')" data-nav="limitranges"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-ruler w-4 text-center text-slate-400"></i>
+                                <span>Limit Ranges</span>
+                            </button></li>
+                        <li><button onclick="navigate('csidrivers')" data-nav="csidrivers"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-plug w-4 text-center text-slate-400"></i>
+                                <span>CSI Drivers</span>
+                            </button></li>
+                        <li><button onclick="navigate('volumeattachments')" data-nav="volumeattachments"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-paperclip w-4 text-center text-slate-400"></i>
+                                <span>Volume Attachments</span>
                             </button></li>
                     </ul>
                 </div>
@@ -243,6 +273,59 @@
                                 <i class="fas fa-folder w-4 text-center text-slate-400"></i>
                                 <span>Namespaces</span>
                             </button></li>
+                        <li><button onclick="navigate('priorityclasses')" data-nav="priorityclasses"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-sort-amount-up w-4 text-center text-slate-400"></i>
+                                <span>Priority Classes</span>
+                            </button></li>
+                        <li><button onclick="navigate('runtimeclasses')" data-nav="runtimeclasses"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-microchip w-4 text-center text-slate-400"></i>
+                                <span>Runtime Classes</span>
+                            </button></li>
+                        <li><button onclick="navigate('leases')" data-nav="leases"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-handshake w-4 text-center text-slate-400"></i>
+                                <span>Leases</span>
+                            </button></li>
+                        <li><button onclick="navigate('mutatingwebhookconfigurations')" data-nav="mutatingwebhookconfigurations"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-random w-4 text-center text-slate-400"></i>
+                                <span>Mutating Webhooks</span>
+                            </button></li>
+                        <li><button onclick="navigate('validatingwebhookconfigurations')" data-nav="validatingwebhookconfigurations"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-check-double w-4 text-center text-slate-400"></i>
+                                <span>Validating Webhooks</span>
+                            </button></li>
+                    </ul>
+                </div>
+
+                <!-- Custom Resources -->
+                <div class="px-3 py-2">
+                    <div class="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">
+                        <span>Custom Resources</span>
+                    </div>
+                    <ul class="space-y-0.5">
+                        <li><button onclick="navigate('customresourcedefinitions')" data-nav="customresourcedefinitions"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-puzzle-piece w-4 text-center text-slate-400"></i>
+                                <span>CRDs</span>
+                            </button></li>
+                    </ul>
+                </div>
+
+                <!-- Helm -->
+                <div class="px-3 py-2">
+                    <div class="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">
+                        <span>Helm</span>
+                    </div>
+                    <ul class="space-y-0.5">
+                        <li><button onclick="navigate('helmreleases')" data-nav="helmreleases"
+                                class="sidebar-section w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors">
+                                <i class="fas fa-dharmachakra w-4 text-center text-slate-400"></i>
+                                <span>Releases</span>
+                            </button></li>
                     </ul>
                 </div>
             </nav>
@@ -291,6 +374,25 @@
         </div>
     </div>
 
+    <!-- In-page confirm/prompt dialog (replaces window.confirm/prompt) -->
+    <dialog id="ui-dialog" class="m-auto bg-slate-800 text-white rounded-lg border border-slate-700 w-full max-w-md shadow-2xl p-0 backdrop:bg-black/50">
+        <form method="dialog">
+            <div class="p-4 border-b border-slate-700">
+                <h2 id="ui-dialog-title" class="text-lg font-semibold"></h2>
+            </div>
+            <div class="p-4 space-y-3">
+                <p id="ui-dialog-message" class="text-sm text-slate-300 whitespace-pre-wrap"></p>
+                <input id="ui-dialog-input" class="hidden w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-k8s-blue">
+            </div>
+            <!-- OK first in DOM so Enter submits OK; row-reverse puts it on the right -->
+            <div class="px-4 py-3 border-t border-slate-700 flex flex-row-reverse gap-2">
+                <button id="ui-dialog-ok" value="ok" class="px-4 py-2 rounded text-sm"></button>
+                <button value="cancel" formnovalidate class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded text-sm">Cancel</button>
+            </div>
+        </form>
+    </dialog>
+    <div id="ui-toasts" class="fixed bottom-4 right-4 z-[70] flex flex-col gap-2"></div>
+
     <!-- Command Palette (Cmd/Ctrl+K) -->
     <div id="command-palette" class="fixed inset-0 hidden z-[60] flex items-start justify-center pt-24">
         <div class="palette-panel" onclick="event.stopPropagation()">
@@ -330,7 +432,12 @@
             'fa-sync-alt': 'refresh-cw', 'fa-tasks': 'list-checks', 'fa-times': 'x',
             'fa-trash': 'trash-2', 'fa-user-cog': 'user-cog', 'fa-user-lock': 'lock',
             'fa-user-shield': 'shield-check', 'fa-user-tag': 'tag', 'fa-search': 'search',
-            'fa-moon': 'moon'
+            'fa-moon': 'moon', 'fa-heartbeat': 'heart-pulse', 'fa-crosshairs': 'crosshair',
+            'fa-code-branch': 'split', 'fa-tachometer-alt': 'gauge', 'fa-ruler': 'ruler',
+            'fa-plug': 'plug', 'fa-paperclip': 'paperclip', 'fa-sort-amount-up': 'arrow-up-wide-narrow',
+            'fa-microchip': 'cpu', 'fa-handshake': 'handshake', 'fa-random': 'shuffle',
+            'fa-check-double': 'check-check', 'fa-puzzle-piece': 'puzzle', 'fa-dharmachakra': 'ship-wheel',
+            'fa-undo': 'undo-2'
         };
 
         function swapFaIcons(root) {
@@ -403,6 +510,23 @@
         // ============================================
         // Command palette (Cmd/Ctrl+K)
         // ============================================
+        // Kinds rendered by the generic Table-based list (renderGenericResources);
+        // keys match the backend kindToGVR map in pkg/api/handlers/yaml_edit.go.
+        const GENERIC_VIEWS = {
+            poddisruptionbudgets: { category: 'Workloads', name: 'Pod Disruption Budgets', icon: 'heart-pulse', namespaced: true },
+            endpoints: { category: 'Service', name: 'Endpoints', icon: 'crosshair', namespaced: true },
+            endpointslices: { category: 'Service', name: 'Endpoint Slices', icon: 'split', namespaced: true },
+            resourcequotas: { category: 'Config', name: 'Resource Quotas', icon: 'gauge', namespaced: true },
+            limitranges: { category: 'Config', name: 'Limit Ranges', icon: 'ruler', namespaced: true },
+            csidrivers: { category: 'Storage', name: 'CSI Drivers', icon: 'plug', namespaced: false },
+            volumeattachments: { category: 'Storage', name: 'Volume Attachments', icon: 'paperclip', namespaced: false },
+            priorityclasses: { category: 'Cluster', name: 'Priority Classes', icon: 'arrow-up-wide-narrow', namespaced: false },
+            runtimeclasses: { category: 'Cluster', name: 'Runtime Classes', icon: 'cpu', namespaced: false },
+            leases: { category: 'Cluster', name: 'Leases', icon: 'handshake', namespaced: true },
+            mutatingwebhookconfigurations: { category: 'Cluster', name: 'Mutating Webhooks', icon: 'shuffle', namespaced: false },
+            validatingwebhookconfigurations: { category: 'Cluster', name: 'Validating Webhooks', icon: 'check-check', namespaced: false },
+            customresourcedefinitions: { category: 'Custom Resources', name: 'CRDs', icon: 'puzzle', namespaced: false },
+        };
         const PALETTE_NAV = [
             { kind: 'view', label: 'Overview', view: 'overview', icon: 'pie-chart' },
             { kind: 'view', label: 'Pods', view: 'pods', icon: 'box' },
@@ -421,7 +545,6 @@
             { kind: 'view', label: 'PersistentVolumeClaims', view: 'persistentvolumeclaims', icon: 'hard-drive' },
             { kind: 'view', label: 'PersistentVolumes', view: 'persistentvolumes', icon: 'database' },
             { kind: 'view', label: 'StorageClasses', view: 'storageclasses', icon: 'layers' },
-            { kind: 'view', label: 'Longhorn Volumes', view: 'longhornvolumes', icon: 'hard-drive' },
             { kind: 'view', label: 'ServiceAccounts', view: 'serviceaccounts', icon: 'user-cog' },
             { kind: 'view', label: 'HPAs', view: 'horizontalpodautoscalers', icon: 'scale' },
             { kind: 'view', label: 'Nodes', view: 'nodes', icon: 'server' },
@@ -431,6 +554,8 @@
             { kind: 'view', label: 'RoleBindings', view: 'rolebindings', icon: 'tag' },
             { kind: 'view', label: 'ClusterRoles', view: 'clusterroles', icon: 'shield-check' },
             { kind: 'view', label: 'ClusterRoleBindings', view: 'clusterrolebindings', icon: 'link' },
+            { kind: 'view', label: 'Helm Releases', view: 'helmreleases', icon: 'ship-wheel' },
+            ...Object.entries(GENERIC_VIEWS).map(([view, v]) => ({ kind: 'view', label: v.name, view, icon: v.icon })),
         ];
         let paletteActiveIdx = 0;
         let paletteFiltered = [];
@@ -659,7 +784,7 @@
 
         async function previewKubeconfig() {
             if (!kubeconfigContent) {
-                alert('Please select a kubeconfig file');
+                toast('Please select a kubeconfig file');
                 return;
             }
 
@@ -812,14 +937,16 @@
             'persistentvolumeclaims': { category: 'Storage', name: 'PVCs' },
             'persistentvolumes': { category: 'Storage', name: 'Persistent Volumes' },
             'storageclasses': { category: 'Storage', name: 'Storage Classes' },
-            'longhornvolumes': { category: 'Storage', name: 'Longhorn Volumes' },
             'nodes': { category: 'Cluster', name: 'Nodes' },
             'namespaces': { category: 'Cluster', name: 'Namespaces' },
             'clusterroles': { category: 'Cluster', name: 'Cluster Roles' },
             'clusterrolebindings': { category: 'Cluster', name: 'Cluster Role Bindings' },
             'roles': { category: 'Cluster', name: 'Roles' },
             'rolebindings': { category: 'Cluster', name: 'Role Bindings' },
-            'events': { category: 'Cluster', name: 'Events' }
+            'events': { category: 'Cluster', name: 'Events' },
+            'customresources': { category: 'Custom Resources', name: 'Custom Resources' },
+            'helmreleases': { category: 'Helm', name: 'Releases' },
+            ...GENERIC_VIEWS
         };
 
         // Update breadcrumb based on current view
@@ -878,14 +1005,17 @@
                 case 'persistentvolumeclaims': renderPVCs(); break;
                 case 'persistentvolumes': renderPVs(); break;
                 case 'storageclasses': renderStorageClasses(); break;
-                case 'longhornvolumes': renderLonghornVolumes(); break;
                 case 'clusterroles': renderClusterRoles(); break;
                 case 'clusterrolebindings': renderClusterRoleBindings(); break;
                 case 'roles': renderRoles(); break;
                 case 'rolebindings': renderRoleBindings(); break;
                 case 'events': renderEvents(); break;
                 case 'logs': renderLogs(detail); break;
-                default: renderOverview();
+                case 'customresources': renderCustomResources(detail); break;
+                case 'helmreleases': renderHelmReleases(); break;
+                default:
+                    if (GENERIC_VIEWS[view]) renderGenericResources(view);
+                    else renderOverview();
             }
         }
 
@@ -918,12 +1048,11 @@
                 'persistentvolumeclaims': 'Persistent Volume Claims',
                 'persistentvolumes': 'Persistent Volumes',
                 'storageclasses': 'Storage Classes',
-                'longhornvolumes': 'Longhorn Volumes',
                 'clusterroles': 'Cluster Roles',
                 'clusterrolebindings': 'Cluster Role Bindings',
                 'logs': 'Logs'
             };
-            return names[view] || view;
+            return names[view] || GENERIC_VIEWS[view]?.name || { helmreleases: 'Helm Releases', customresources: 'Custom Resources' }[view] || view;
         }
 
         function refreshCurrentView() {
@@ -1215,10 +1344,6 @@
             if (s === 'pending') return 'status-pending';
             // Coming up (containers being created or pod initializing) — cyan
             if (s === 'containercreating' || s === 'podinitializing' || s.startsWith('init:')) return 'status-creating';
-            // Longhorn volume transitions — cyan
-            if (s === 'attaching' || s === 'detaching' || s === 'creating' || s === 'deleting') return 'status-creating';
-            // Longhorn detached (idle) — slate (informational, not an error)
-            if (s === 'detached') return 'status-unknown';
             // Graceful shutdown — orange
             if (s === 'terminating') return 'status-terminating';
             // Image / config problems — amber (recoverable but stuck)
@@ -1229,10 +1354,7 @@
             // OOM-killed — deep red
             if (s === 'oomkilled') return 'status-oomkilled';
             // Pod-Ready condition is False but containers are running — rose
-            // Longhorn "degraded" (replica missing but volume usable) — same bucket
-            if (s === 'notready' || s === 'degraded') return 'status-notready';
-            // Longhorn "faulted" — acute failure
-            if (s === 'faulted') return 'status-failed';
+            if (s === 'notready') return 'status-notready';
             // Generic errors / non-zero exits — red
             if (s === 'failed' || s === 'error' || s.startsWith('exitcode:') || s.startsWith('signal:') ||
                 s === 'rundockererror' || s === 'startup probefailed') return 'status-failed';
@@ -1422,7 +1544,7 @@
                 `;
                 document.getElementById('detail-modal').classList.remove('hidden');
             } catch (err) {
-                alert('Error loading node details: ' + err.message);
+                toast('Error loading node details: ' + err.message);
             }
         }
 
@@ -1606,8 +1728,8 @@
                 const el = document.getElementById(this.liveId);
                 if (!el) return;
                 if (s === 'live') {
-                    el.innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-green-400 mr-1.5 align-middle animate-pulse"></span>Live';
-                    el.className = 'text-xs text-green-400 flex items-center';
+                    el.innerHTML = '';
+                    el.className = 'hidden';
                 } else if (s === 'connecting') {
                     el.innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-yellow-400 mr-1.5 align-middle"></span>Connecting…';
                     el.className = 'text-xs text-yellow-400 flex items-center';
@@ -1776,12 +1898,12 @@
                 `;
                 document.getElementById('detail-modal').classList.remove('hidden');
             } catch (err) {
-                alert('Error: ' + err.message);
+                toast('Error: ' + err.message);
             }
         }
 
         async function deletePod(namespace, name) {
-            if (!confirm(`Delete pod "${name}" in namespace "${namespace}"?`)) return;
+            if (!await uiConfirm('Delete pod', `Delete pod "${name}" in namespace "${namespace}"?`, { okText: 'Delete', danger: true })) return;
             try {
                 await fetch(`${getClusterAPI()}/pods/${namespace}/${name}`, { method: 'DELETE' });
                 // If on the live pods view, just remove the row optimistically.
@@ -1795,19 +1917,14 @@
                     refreshCurrentView();
                 }
             } catch (err) {
-                alert('Error: ' + err.message);
+                toast('Error: ' + err.message);
             }
         }
 
         // Deployment actions
         async function scaleDeployment(namespace, name) {
-            const replicas = prompt(`Scale deployment "${name}" to how many replicas?`, '1');
-            if (replicas === null) return;
-            const num = parseInt(replicas);
-            if (isNaN(num) || num < 0) {
-                alert('Please enter a valid number >= 0');
-                return;
-            }
+            const num = await uiPromptReplicas('deployment', name);
+            if (num === null) return;
             try {
                 await fetch(`${getClusterAPI()}/deployments/${namespace}/${name}/scale`, {
                     method: 'PUT',
@@ -1816,22 +1933,32 @@
                 });
                 refreshCurrentView();
             } catch (err) {
-                alert('Error: ' + err.message);
+                toast('Error: ' + err.message);
             }
         }
 
-        async function restartDeployment(namespace, name) {
-            if (!confirm(`Restart deployment "${name}" in namespace "${namespace}"?`)) return;
+        // kind: 'deployments' | 'statefulsets' | 'daemonsets'
+        async function restartWorkload(kind, namespace, name) {
+            const singular = { deployments: 'Deployment', statefulsets: 'StatefulSet', daemonsets: 'DaemonSet' }[kind] || kind;
+            if (!await uiConfirm(`Restart ${singular}`, `Restart ${singular} "${name}" in namespace "${namespace}"? Pods are recreated with a rolling update.`, { okText: 'Restart' })) return;
             try {
-                await fetch(`${getClusterAPI()}/deployments/${namespace}/${name}/restart`, { method: 'POST' });
+                const res = await fetch(`${getClusterAPI()}/${kind}/${namespace}/${name}/restart`, { method: 'POST' });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    toast(data.details || data.error || `HTTP ${res.status}`, 'error');
+                    return;
+                }
+                toast(`${singular} "${name}" restarting`, 'success');
                 refreshCurrentView();
             } catch (err) {
-                alert('Error: ' + err.message);
+                toast('Error: ' + err.message, 'error');
             }
         }
 
+        function restartDeployment(namespace, name) { return restartWorkload('deployments', namespace, name); }
+
         async function deleteDeployment(namespace, name) {
-            if (!confirm(`Delete deployment "${name}" in namespace "${namespace}"? This will also delete all pods managed by this deployment.`)) return;
+            if (!await uiConfirm('Delete deployment', `Delete deployment "${name}" in namespace "${namespace}"? This will also delete all pods managed by this deployment.`, { okText: 'Delete', danger: true })) return;
             try {
                 await fetch(`${getClusterAPI()}/deployments/${namespace}/${name}`, { method: 'DELETE' });
                 if (currentView === 'deployments' && liveTable.es) {
@@ -1840,19 +1967,14 @@
                     refreshCurrentView();
                 }
             } catch (err) {
-                alert('Error: ' + err.message);
+                toast('Error: ' + err.message);
             }
         }
 
         // StatefulSet actions
         async function scaleStatefulSet(namespace, name) {
-            const replicas = prompt(`Scale statefulset "${name}" to how many replicas?`, '1');
-            if (replicas === null) return;
-            const num = parseInt(replicas);
-            if (isNaN(num) || num < 0) {
-                alert('Please enter a valid number >= 0');
-                return;
-            }
+            const num = await uiPromptReplicas('statefulset', name);
+            if (num === null) return;
             try {
                 await fetch(`${getClusterAPI()}/statefulsets/${namespace}/${name}/scale`, {
                     method: 'PUT',
@@ -1861,12 +1983,12 @@
                 });
                 refreshCurrentView();
             } catch (err) {
-                alert('Error: ' + err.message);
+                toast('Error: ' + err.message);
             }
         }
 
         async function deleteStatefulSet(namespace, name) {
-            if (!confirm(`Delete statefulset "${name}" in namespace "${namespace}"? This will also delete all pods managed by this statefulset.`)) return;
+            if (!await uiConfirm('Delete statefulset', `Delete statefulset "${name}" in namespace "${namespace}"? This will also delete all pods managed by this statefulset.`, { okText: 'Delete', danger: true })) return;
             try {
                 await fetch(`${getClusterAPI()}/statefulsets/${namespace}/${name}`, { method: 'DELETE' });
                 if (currentView === 'statefulsets' && liveTable.es) {
@@ -1875,12 +1997,12 @@
                     refreshCurrentView();
                 }
             } catch (err) {
-                alert('Error: ' + err.message);
+                toast('Error: ' + err.message);
             }
         }
 
         async function deleteDaemonSet(namespace, name) {
-            if (!confirm(`Delete daemonset "${name}" in namespace "${namespace}"? This will also delete all pods managed by this daemonset.`)) return;
+            if (!await uiConfirm('Delete daemonset', `Delete daemonset "${name}" in namespace "${namespace}"? This will also delete all pods managed by this daemonset.`, { okText: 'Delete', danger: true })) return;
             try {
                 const res = await fetch(`${getClusterAPI()}/daemonsets/${namespace}/${name}`, { method: 'DELETE' });
                 if (!res.ok) {
@@ -1889,12 +2011,12 @@
                 }
                 refreshCurrentView();
             } catch (err) {
-                alert('Error: ' + err.message);
+                toast('Error: ' + err.message);
             }
         }
 
         async function deleteReplicaSet(namespace, name) {
-            if (!confirm(`Delete replicaset "${name}" in namespace "${namespace}"?\n\nNote: if a Deployment owns this ReplicaSet, the controller will recreate it.`)) return;
+            if (!await uiConfirm('Delete replicaset', `Delete replicaset "${name}" in namespace "${namespace}"?\n\nNote: if a Deployment owns this ReplicaSet, the controller will recreate it.`, { okText: 'Delete', danger: true })) return;
             try {
                 const res = await fetch(`${getClusterAPI()}/replicasets/${namespace}/${name}`, { method: 'DELETE' });
                 if (!res.ok) {
@@ -1903,7 +2025,7 @@
                 }
                 refreshCurrentView();
             } catch (err) {
-                alert('Error: ' + err.message);
+                toast('Error: ' + err.message);
             }
         }
 
@@ -1918,7 +2040,9 @@
             // Cluster-scoped resources pass null/empty namespace; encode as
             // "_" placeholder so URL has a stable shape.
             const ns = namespace || '_';
-            const display = kind.charAt(0).toUpperCase() + kind.slice(1).replace(/s$/, '');
+            const display = kind.startsWith('cr:') ? kind.split(':')[3]
+                : GENERIC_VIEWS[kind] ? GENERIC_VIEWS[kind].name.replace(/s$/, '')
+                : kind.charAt(0).toUpperCase() + kind.slice(1).replace(/s$/, '');
             const titleSuffix = namespace ? `${namespace}/${name}` : name;
             document.getElementById('modal-title').textContent = `Edit ${display}: ${titleSuffix}`;
             // Fixed-height editor + sticky footer so the Save button is always
@@ -1931,7 +2055,7 @@
                         <span>Editing live YAML — Save sends a Kubernetes Update.</span>
                     </div>
                     <div id="yaml-editor-container"
-                         class="rounded border border-slate-700 overflow-hidden bg-slate-900"
+                         class="code-block rounded overflow-hidden"
                          style="height: calc(100vh - 220px); min-height: 280px;">
                         <div class="p-3 text-sm text-slate-400"><i class="fas fa-spinner fa-spin mr-2"></i>Loading YAML...</div>
                     </div>
@@ -1967,7 +2091,7 @@
                 window._yamlEditor = new cm.EditorView({
                     parent: container,
                     doc: yamlText,
-                    extensions: [cm.basicSetup, cm.yaml(), cm.oneDark]
+                    extensions: [cm.basicSetup, cm.yaml(), cm.yamlTheme]
                 });
             } catch (err) {
                 showYamlError(`Failed to load YAML: ${err.message}`);
@@ -2056,7 +2180,7 @@
                         </button>
                     </div>
                 </div>
-                <div id="log-output" class="bg-slate-950 rounded-lg border border-slate-700 p-4 h-[calc(100vh-280px)] overflow-auto log-container">
+                <div id="log-output" class="code-block rounded-lg p-4 h-[calc(100vh-280px)] overflow-auto log-container">
                     <p class="text-slate-500">Enter namespace and pod name, then click Stream</p>
                 </div>
             `;
@@ -2107,7 +2231,7 @@
             const namespace = document.getElementById('log-namespace').value;
             const pod = document.getElementById('log-pod').value;
             if (!namespace || !pod) {
-                alert('Please enter namespace and pod name');
+                toast('Please enter namespace and pod name');
                 return;
             }
             const container = document.getElementById('log-container')?.value || '';
@@ -2121,7 +2245,7 @@
                 if (logOutput.querySelector('.text-slate-500')) logOutput.innerHTML = '';
                 const line = document.createElement('div');
                 line.textContent = e.data;
-                line.className = 'text-green-400 whitespace-pre';
+                line.className = 'whitespace-pre'; // inherits white from .code-block
                 logOutput.appendChild(line);
                 logOutput.scrollTop = logOutput.scrollHeight;
             });
@@ -2267,7 +2391,7 @@
                 `;
                 document.getElementById('detail-modal').classList.remove('hidden');
             } catch (err) {
-                alert('Error: ' + err.message);
+                toast('Error: ' + err.message);
             }
         }
 
@@ -2294,6 +2418,7 @@
                     { label: 'Age', key: 'age', class: 'text-slate-400' }
                 ], getItems(data), r => `
                     ${editBtnHTML('daemonsets', r.namespace, r.name)}
+                    <button onclick="restartWorkload('daemonsets', '${r.namespace}', '${r.name}')" class="text-yellow-400 hover:text-yellow-300 ml-2" title="Restart"><i class="fas fa-redo"></i></button>
                     <button onclick="deleteDaemonSet('${r.namespace}', '${r.name}')" class="text-red-400 hover:text-red-300 ml-2" title="Delete"><i class="fas fa-trash"></i></button>
                 `)}
                     </div>
@@ -2318,6 +2443,7 @@
                 actions: r => `
                     <button onclick="editResourceYaml('statefulsets', '${r.namespace}', '${r.name}')" class="text-green-400 hover:text-green-300 mr-2" title="Edit"><i class="fas fa-edit"></i></button>
                     <button onclick="scaleStatefulSet('${r.namespace}', '${r.name}')" class="text-blue-400 hover:text-blue-300 mr-2" title="Scale"><i class="fas fa-expand-arrows-alt"></i></button>
+                    <button onclick="restartWorkload('statefulsets', '${r.namespace}', '${r.name}')" class="text-yellow-400 hover:text-yellow-300 mr-2" title="Restart"><i class="fas fa-redo"></i></button>
                     <button onclick="deleteStatefulSet('${r.namespace}', '${r.name}')" class="text-red-400 hover:text-red-300" title="Delete"><i class="fas fa-trash"></i></button>
                 `,
             });
@@ -2542,7 +2668,7 @@
                                             <span class="font-medium text-yellow-400">${k}</span>
                                             <span class="text-xs text-slate-400">${v.length} chars</span>
                                         </div>
-                                        <pre class="text-xs overflow-auto max-h-48 bg-slate-800 p-2 rounded whitespace-pre-wrap">${escapeHtml(v)}</pre>
+                                        <pre class="code-block mono text-xs overflow-auto max-h-48 p-2 rounded whitespace-pre-wrap">${escapeHtml(v)}</pre>
                                     </div>
                                 `).join('') || '<div class="text-slate-400">No data</div>'}
                             </div>
@@ -2551,7 +2677,7 @@
                 `;
                 document.getElementById('detail-modal').classList.remove('hidden');
             } catch (err) {
-                alert('Error: ' + err.message);
+                toast('Error: ' + err.message);
             }
         }
 
@@ -2639,7 +2765,7 @@
                                             </div>
                                         </div>
                                         ${reveal
-                                            ? `<pre class="text-[11px] mono whitespace-pre-wrap break-all max-h-48 overflow-auto bg-slate-900 rounded p-2 text-slate-200">${safe}</pre>`
+                                            ? `<pre class="code-block text-[11px] mono whitespace-pre-wrap break-all max-h-48 overflow-auto rounded p-2">${safe}</pre>`
                                             : `<div class="text-[11px] text-slate-500 italic">hidden — click "Reveal values" to show</div>`}
                                     </div>`;
                                 }).join('')}
@@ -2649,7 +2775,7 @@
                 `;
                 document.getElementById('detail-modal').classList.remove('hidden');
             } catch (err) {
-                alert('Error loading secret: ' + err.message);
+                toast('Error loading secret: ' + err.message);
             }
         }
 
@@ -2733,151 +2859,6 @@
                 `;
             } catch (err) {
                 content.innerHTML = renderErrorState(currentView, err.message);
-            }
-        }
-
-        // Longhorn Volumes — CRD list, also editable via YAML drawer.
-        async function renderLonghornVolumes() {
-            const content = document.getElementById('content');
-            content.innerHTML = skeletonTable(7, 8);
-            try {
-                const data = await fetch(`${getClusterAPI()}/longhornvolumes`).then(r => r.json());
-                if (data && data.available === false) {
-                    content.innerHTML = `
-                        <div class="mb-4"><h1 class="text-xl font-bold">Longhorn Volumes</h1></div>
-                        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 text-sm text-slate-300">
-                            <div class="flex items-start gap-3">
-                                <i class="fas fa-exclamation-triangle text-yellow-400 mt-1"></i>
-                                <div>
-                                    <div class="font-medium mb-1">Longhorn isn't installed on this cluster.</div>
-                                    <div class="text-slate-400">${data.hint || 'No volumes.longhorn.io CRD found.'}</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    return;
-                }
-                content.innerHTML = `
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center gap-3">
-                            <h1 class="text-xl font-bold">Longhorn Volumes</h1>
-                            ${data.version ? `<span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">${data.version}</span>` : ''}
-                        </div>
-                        <span class="text-sm text-slate-400">${getItems(data).length} total</span>
-                    </div>
-                    <div class="bg-slate-800 rounded-lg border border-slate-700">
-                        ${renderTable([
-                            { label: 'Name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showLonghornVolumeDetail('${r.namespace}', '${r.name}')">${r.name}</span>` },
-                            { label: 'Namespace', class: 'cell-namespace', render: r => r.namespace || '' },
-                            { label: 'State', render: r => statusPillHTML(r.state || 'unknown') },
-                            { label: 'Robustness', render: r => statusPillHTML(r.robustness || 'unknown') },
-                            { label: 'Size', render: r => r.size || '-' },
-                            { label: 'Used', render: r => r.actualSize || '-' },
-                            { label: 'Replicas', render: r => r.numberOfReplicas ?? '-' },
-                            { label: 'Node', render: r => r.node || '-' },
-                            { label: 'PVC', render: r => r.pvcName ? `<span class="mono text-xs text-slate-400">${r.pvcNamespace || ''}/${r.pvcName}</span>` : '-' },
-                            { label: 'Age', class: 'text-slate-400', render: r => r.age || '' },
-                        ], getItems(data), r => editBtnHTML('longhornvolumes', r.namespace, r.name))}
-                    </div>
-                `;
-            } catch (err) {
-                content.innerHTML = renderErrorState(currentView, err.message);
-            }
-        }
-
-        async function showLonghornVolumeDetail(namespace, name) {
-            try {
-                const data = await fetchAPI(`${getClusterAPI()}/longhornvolumes/${namespace}/${name}`);
-                document.getElementById('modal-title').textContent = `Longhorn Volume: ${namespace}/${name}`;
-                const spec = data.spec || {};
-                const status = data.status || {};
-                const ks = status.kubernetesStatus || {};
-                const conditions = status.conditions || [];
-                const replicas = status.replicas || {};
-                document.getElementById('modal-content').innerHTML = `
-                    <div class="space-y-4">
-                        <div class="bg-slate-700/40 rounded p-4">
-                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Status</h3>
-                            <div class="grid grid-cols-2 gap-3 text-sm">
-                                <div><span class="text-slate-400">State:</span> ${statusPillHTML(status.state || 'unknown')}</div>
-                                <div><span class="text-slate-400">Robustness:</span> ${statusPillHTML(status.robustness || 'unknown')}</div>
-                                <div><span class="text-slate-400">Current Node:</span> <span class="mono">${status.currentNodeID || '-'}</span></div>
-                                <div><span class="text-slate-400">Owner:</span> <span class="mono">${status.ownerID || '-'}</span></div>
-                                <div><span class="text-slate-400">Frontend:</span> ${spec.frontend || '-'}</div>
-                                <div><span class="text-slate-400">Frontend Disabled:</span> ${spec.disableFrontend ? 'Yes' : 'No'}</div>
-                            </div>
-                        </div>
-                        <div class="bg-slate-700/40 rounded p-4">
-                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Spec</h3>
-                            <div class="grid grid-cols-2 gap-3 text-sm">
-                                <div><span class="text-slate-400">Size:</span> <span class="mono">${spec.size || '-'}</span></div>
-                                <div><span class="text-slate-400">Replicas:</span> ${spec.numberOfReplicas ?? '-'}</div>
-                                <div><span class="text-slate-400">Node Selector:</span> <span class="mono text-xs">${(spec.nodeSelector || []).join(', ') || '-'}</span></div>
-                                <div><span class="text-slate-400">Disk Selector:</span> <span class="mono text-xs">${(spec.diskSelector || []).join(', ') || '-'}</span></div>
-                                <div><span class="text-slate-400">Stale Replica Timeout:</span> ${spec.staleReplicaTimeout ?? '-'}</div>
-                                <div><span class="text-slate-400">Encrypted:</span> ${spec.encrypted ? 'Yes' : 'No'}</div>
-                            </div>
-                        </div>
-                        ${(ks.pvName || ks.pvcName) ? `
-                        <div class="bg-slate-700/40 rounded p-4">
-                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Kubernetes Bindings</h3>
-                            <div class="grid grid-cols-2 gap-3 text-sm">
-                                <div><span class="text-slate-400">PV:</span> <span class="mono">${ks.pvName || '-'}</span></div>
-                                <div><span class="text-slate-400">PV Status:</span> <span class="mono">${ks.pvStatus || '-'}</span></div>
-                                <div><span class="text-slate-400">PVC:</span> <span class="mono">${ks.pvcName ? (ks.namespace || '') + '/' + ks.pvcName : '-'}</span></div>
-                                <div><span class="text-slate-400">Workloads:</span> <span class="mono text-xs">${(ks.workloadsStatus || []).map(w => w.podName || w.workloadName).join(', ') || '-'}</span></div>
-                            </div>
-                        </div>` : ''}
-                        ${Object.keys(replicas).length ? `
-                        <div class="bg-slate-700/40 rounded p-4">
-                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Replicas (${Object.keys(replicas).length})</h3>
-                            <table class="w-full text-xs">
-                                <thead><tr class="text-slate-400 border-b border-slate-600">
-                                    <th class="text-left p-2">Name</th>
-                                    <th class="text-left p-2">Mode</th>
-                                    <th class="text-left p-2">Running</th>
-                                </tr></thead>
-                                <tbody>
-                                    ${Object.entries(replicas).map(([k, v]) => `
-                                        <tr class="border-b border-slate-600/50">
-                                            <td class="p-2 mono">${k}</td>
-                                            <td class="p-2">${(v && v.mode) || '-'}</td>
-                                            <td class="p-2">${v && v.running ? 'Yes' : 'No'}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>` : ''}
-                        ${conditions.length ? `
-                        <div class="bg-slate-700/40 rounded p-4">
-                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Conditions (${conditions.length})</h3>
-                            <table class="w-full text-xs">
-                                <thead><tr class="text-slate-400 border-b border-slate-600">
-                                    <th class="text-left p-2">Type</th>
-                                    <th class="text-left p-2">Status</th>
-                                    <th class="text-left p-2">Reason</th>
-                                    <th class="text-left p-2">Message</th>
-                                </tr></thead>
-                                <tbody>
-                                    ${conditions.map(c => `
-                                        <tr class="border-b border-slate-600/50">
-                                            <td class="p-2 mono">${c.type}</td>
-                                            <td class="p-2">${c.status}</td>
-                                            <td class="p-2 text-slate-400">${c.reason || '-'}</td>
-                                            <td class="p-2 text-slate-400">${(c.message || '').slice(0, 120)}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>` : ''}
-                        <div class="flex justify-end">
-                            <button onclick="editResourceYaml('longhornvolumes','${namespace}','${name}')" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm"><i class="fas fa-edit mr-1"></i>Edit YAML</button>
-                        </div>
-                    </div>
-                `;
-                document.getElementById('detail-modal').classList.remove('hidden');
-            } catch (err) {
-                alert('Error loading volume: ' + err.message);
             }
         }
 
@@ -3367,10 +3348,271 @@
             }
         }
 
+        // ============================================
+        // Generic resources & CRDs
+        // ============================================
+        // Rows of the last generic list; onclick handlers reference them by
+        // index so untrusted names never get interpolated into JS strings.
+        let _genericRows = [];
+        let _genericKind = null;
+        let _lastCRDetail = null;
+
+        function genericEdit(i) {
+            const r = _genericRows[i];
+            if (r) editResourceYaml(_genericKind, r.namespace || null, r.name);
+        }
+
+        function genericOpenCRD(i) {
+            const r = _genericRows[i];
+            if (r) navigate('customresources', { crKind: r.crKind, kind: r.kind, group: r.group, version: r.version, scope: r.scope, name: r.name });
+        }
+
+        async function renderGenericResources(kind, opts = {}) {
+            const view = currentView;
+            const meta = GENERIC_VIEWS[kind] || {};
+            const title = opts.title || meta.name || kind;
+            const namespaced = opts.namespaced ?? meta.namespaced;
+            const isCRD = kind === 'customresourcedefinitions';
+            const content = document.getElementById('content');
+            content.innerHTML = skeletonTable(6, 8);
+            try {
+                const res = await fetch(`${getClusterAPI()}/resources/${encodeURIComponent(kind)}${namespaced ? getNamespaceParam() : ''}`);
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    const e = new Error(data.error || `HTTP ${res.status}`);
+                    e.status = res.status; e.details = data.details;
+                    throw e;
+                }
+                if (currentView !== view) return; // user navigated away meanwhile
+                const items = getItems(data);
+                _genericRows = items;
+                _genericKind = kind;
+                items.forEach((r, i) => { r._i = i; });
+                const serverCols = data.columns || [];
+                const nameIdx = serverCols.indexOf('Name');
+                const cols = [{
+                    label: 'Name',
+                    render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="${isCRD ? 'genericOpenCRD' : 'genericEdit'}(${r._i})">${escapeHtml(r.name)}</span>`
+                }];
+                if (namespaced) cols.push({ label: 'Namespace', class: 'cell-namespace', render: r => escapeHtml(r.namespace || '-') });
+                if (isCRD) ['group', 'version', 'kind', 'scope'].forEach(k =>
+                    cols.push({ label: k.charAt(0).toUpperCase() + k.slice(1), render: r => escapeHtml(r[k] ?? '-') }));
+                serverCols.forEach((c, i) => {
+                    if (i === nameIdx) return;
+                    cols.push({ label: escapeHtml(c), render: r => { const v = (r.cells || [])[i]; return v === null || v === undefined || v === '' ? '-' : escapeHtml(String(v)); } });
+                });
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">${escapeHtml(title)}</h1>
+                        <span class="text-sm text-slate-400">${items.length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable(cols, items, r => `<button onclick="genericEdit(${r._i})" class="text-green-400 hover:text-green-300" title="Edit YAML"><i class="fas fa-edit"></i></button>`)}
+                    </div>
+                `;
+            } catch (err) {
+                if (currentView !== view) return;
+                let html = renderErrorState(view, err.message);
+                if (err.status) {
+                    const label = err.status === 403 ? 'Forbidden — the dashboard service account lacks RBAC permission for this resource.' : `Server returned ${err.status}.`;
+                    html += `<div class="mt-4 mx-auto max-w-2xl px-3 py-2 rounded text-sm bg-red-900/40 border border-red-700 text-red-200 whitespace-pre-wrap mono">${escapeHtml(label)}\n${escapeHtml(err.message)}${err.details ? '\n' + escapeHtml(err.details) : ''}</div>`;
+                }
+                content.innerHTML = html;
+            }
+        }
+
+        function renderCustomResources(detail) {
+            detail = detail || _lastCRDetail;
+            if (!detail || !detail.crKind) { navigate('customresourcedefinitions'); return; }
+            _lastCRDetail = detail;
+            const label = detail.kind || detail.name;
+            document.getElementById('breadcrumb-content').innerHTML =
+                `<span class="breadcrumb-category">Custom Resources</span><span class="breadcrumb-separator">›</span>` +
+                `<a href="#" onclick="navigate('customresourcedefinitions')">CRDs</a><span class="breadcrumb-separator">›</span>` +
+                `<span class="breadcrumb-current">${escapeHtml(label)}</span>`;
+            renderGenericResources(detail.crKind, { title: label, namespaced: detail.scope === 'Namespaced' });
+        }
+
+        // ============================================
+        // Helm releases
+        // ============================================
+        // JS args for inline onclick="fn(...)": JSON literals, HTML-attribute-escaped so quotes can't break out.
+        const helmArgs = (...a) => a.map(v => JSON.stringify(v)).join(', ').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        const helmStatusClass = s => s === 'deployed' ? 'text-green-400' : s === 'failed' ? 'text-red-400'
+            : String(s || '').startsWith('pending') ? 'text-yellow-400' : 'text-slate-400';
+        function helmAge(ts) {
+            const sec = (Date.now() - new Date(ts)) / 1000;
+            if (!ts || isNaN(sec)) return '-';
+            if (sec < 60) return `${Math.max(0, Math.floor(sec))}s`;
+            if (sec < 3600) return `${Math.floor(sec / 60)}m`;
+            if (sec < 86400) return `${Math.floor(sec / 3600)}h`;
+            return `${Math.floor(sec / 86400)}d`;
+        }
+
+        async function renderHelmReleases() {
+            const content = document.getElementById('content');
+            content.innerHTML = skeletonTable(6, 8);
+            try {
+                const items = getItems(await fetchAPI(`${getClusterAPI()}/helm/releases${getNamespaceParam()}`));
+                content.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-bold">Helm Releases</h1>
+                        <span class="text-sm text-slate-400">${items.length} total</span>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg border border-slate-700">
+                        ${renderTable([
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showHelmRelease(${helmArgs(r.namespace, r.name)})">${escapeHtml(r.name)}</span>` },
+                    { label: 'Namespace', key: 'namespace', class: 'cell-namespace', render: r => escapeHtml(r.namespace) },
+                    { label: 'Revision', key: 'revision' },
+                    { label: 'Status', key: 'status', render: r => `<span class="${helmStatusClass(r.status)}">${escapeHtml(r.status || '-')}</span>` },
+                    { label: 'Chart', key: 'chart', render: r => escapeHtml(r.chart || '-') },
+                    { label: 'App Version', key: 'appVersion', render: r => escapeHtml(r.appVersion || '-') },
+                    { label: 'Updated', key: 'updated', class: 'text-slate-400', render: r => `<span title="${escapeHtml(r.updated || '')}">${helmAge(r.updated)}</span>` }
+                ], items, r => `
+                    ${r.revision > 1 ? `<button onclick="rollbackHelmRelease(${helmArgs(r.namespace, r.name, 0)}, this)" class="px-2 py-1 bg-slate-600 hover:bg-slate-500 rounded text-xs mr-1" title="Rollback to previous revision"><i class="fas fa-undo"></i></button>` : ''}
+                    <button onclick="uninstallHelmRelease(${helmArgs(r.namespace, r.name)}, this)" class="px-2 py-1 bg-red-600 hover:bg-red-500 rounded text-xs" title="Uninstall"><i class="fas fa-trash"></i></button>
+                `)}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = renderErrorState(currentView, err.message);
+            }
+        }
+
+        async function showHelmRelease(namespace, name) {
+            try {
+                const d = await fetchAPI(`${getClusterAPI()}/helm/releases/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}`);
+                const e = v => escapeHtml(v == null || v === '' ? '-' : String(v));
+                const pre = text => `<pre class="code-block mono text-xs overflow-auto max-h-96 p-2 rounded mt-2 whitespace-pre">${escapeHtml(text || '')}</pre>`;
+                const section = (title, text) => text ? `
+                    <details class="bg-slate-700 rounded p-4">
+                        <summary class="text-sm font-semibold text-k8s-blue cursor-pointer"><i class="fas fa-file-code mr-2"></i>${title}</summary>
+                        ${pre(text)}
+                    </details>` : '';
+                document.getElementById('modal-title').textContent = `Helm Release: ${namespace}/${name}`;
+                document.getElementById('modal-content').innerHTML = `
+                    <div class="space-y-4">
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Summary</h3>
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div><span class="text-slate-400">Status:</span> <span class="${helmStatusClass(d.status)}">${e(d.status)}</span></div>
+                                <div><span class="text-slate-400">Revision:</span> ${e(d.revision)}</div>
+                                <div><span class="text-slate-400">Chart:</span> ${e(d.chart)}</div>
+                                <div><span class="text-slate-400">App Version:</span> ${e(d.appVersion)}</div>
+                                <div><span class="text-slate-400">First Deployed:</span> ${e(d.firstDeployed)}</div>
+                                <div><span class="text-slate-400">Last Updated:</span> ${e(d.updated)}</div>
+                                <div class="col-span-2"><span class="text-slate-400">Description:</span> ${e(d.description)}</div>
+                            </div>
+                        </div>
+                        ${d.notes ? `
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue">Notes</h3>
+                            ${pre(d.notes)}
+                        </div>` : ''}
+                        <div class="bg-slate-700 rounded p-4">
+                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">History</h3>
+                            <table class="w-full text-sm">
+                                <thead class="text-slate-400 text-left"><tr><th class="py-1">Rev</th><th>Status</th><th>Chart</th><th>App</th><th>Updated</th><th>Description</th><th></th></tr></thead>
+                                <tbody class="divide-y divide-slate-600">
+                                    ${(d.history || []).map(h => `
+                                        <tr>
+                                            <td class="py-1">${e(h.revision)}</td>
+                                            <td class="${helmStatusClass(h.status)}">${e(h.status)}</td>
+                                            <td>${e(h.chart)}</td>
+                                            <td>${e(h.appVersion)}</td>
+                                            <td class="text-slate-400" title="${e(h.updated)}">${helmAge(h.updated)}</td>
+                                            <td class="text-slate-300">${e(h.description)}</td>
+                                            <td class="text-right">${h.revision !== d.revision ? `<button onclick="rollbackHelmRelease(${helmArgs(namespace, name, Number(h.revision))}, this)" class="px-2 py-1 bg-slate-600 hover:bg-slate-500 rounded text-xs whitespace-nowrap"><i class="fas fa-undo mr-1"></i>Rollback to r${e(h.revision)}</button>` : ''}</td>
+                                        </tr>`).join('') || '<tr><td colspan="7" class="text-slate-400 py-1">No history</td></tr>'}
+                                </tbody>
+                            </table>
+                        </div>
+                        ${section('User Values', d.userValues)}
+                        ${section('All Values (computed)', d.allValues)}
+                        ${section('Manifest', d.manifest)}
+                    </div>
+                `;
+                document.getElementById('detail-modal').classList.remove('hidden');
+            } catch (err) {
+                toast('Error: ' + err.message);
+            }
+        }
+
+        // Shared runner for helm mutations: disables the clicked button with a spinner while the request runs.
+        async function helmMutate(url, opts, btn, okMsg) {
+            const orig = btn?.innerHTML;
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+            try {
+                const res = await fetch(url, opts);
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) { toast(data.details || data.error || `HTTP ${res.status}`, 'error'); return; }
+                toast(data.message || okMsg, 'success');
+                closeModal();
+                refreshCurrentView();
+            } catch (err) {
+                toast('Error: ' + err.message, 'error');
+            } finally {
+                if (btn && btn.isConnected) { btn.disabled = false; btn.innerHTML = orig; }
+            }
+        }
+
+        async function rollbackHelmRelease(namespace, name, revision, btn) {
+            const target = revision ? `revision ${revision}` : 'the previous revision';
+            if (!await uiConfirm('Rollback release', `Roll back Helm release "${name}" in namespace "${namespace}" to ${target}?`, { okText: 'Rollback' })) return;
+            toast(`Rolling back ${name}… this can take a while`, 'info');
+            await helmMutate(`${getClusterAPI()}/helm/releases/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}/rollback`,
+                { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ revision: Number(revision) || 0 }) },
+                btn, `Rolled back ${name}`);
+        }
+
+        async function uninstallHelmRelease(namespace, name, btn) {
+            if (!await uiConfirm('Uninstall release', `Uninstall Helm release "${name}" in namespace "${namespace}"? This deletes ALL Kubernetes resources created by the release and cannot be undone.`, { okText: 'Uninstall', danger: true })) return;
+            await helmMutate(`${getClusterAPI()}/helm/releases/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}`, { method: 'DELETE' }, btn, `Uninstalled ${name}`);
+        }
+
         // Utilities
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('hidden');
+        }
+
+        // In-page replacements for window.confirm / prompt / alert.
+        function uiDialog(title, message, { okText = 'Confirm', danger = false, input = null } = {}) {
+            const dlg = document.getElementById('ui-dialog');
+            const inp = document.getElementById('ui-dialog-input');
+            const ok = document.getElementById('ui-dialog-ok');
+            document.getElementById('ui-dialog-title').textContent = title;
+            document.getElementById('ui-dialog-message').textContent = message;
+            ok.textContent = okText;
+            ok.className = `px-4 py-2 rounded text-sm ${danger ? 'bg-red-600 hover:bg-red-500' : 'bg-k8s-blue hover:opacity-90'}`;
+            inp.classList.toggle('hidden', !input);
+            if (input) Object.assign(inp, { type: 'text', min: '', step: '', required: false, value: '' }, input);
+            dlg.returnValue = '';
+            dlg.showModal();
+            (input ? inp : ok).focus();
+            if (input) inp.select();
+            return new Promise(resolve => dlg.addEventListener('close', () => {
+                const confirmed = dlg.returnValue === 'ok';
+                resolve(input ? (confirmed ? inp.value : null) : confirmed);
+            }, { once: true }));
+        }
+        const uiConfirm = (title, message, opts) => uiDialog(title, message, opts);
+        const uiPrompt = (title, message, input, opts) => uiDialog(title, message, { okText: 'OK', ...opts, input });
+        async function uiPromptReplicas(kind, name) {
+            const v = await uiPrompt(`Scale ${kind}`, `Scale ${kind} "${name}" to how many replicas?`,
+                { type: 'number', min: '0', step: '1', required: true, value: '1' }, { okText: 'Scale' });
+            return v === null ? null : parseInt(v, 10);
+        }
+        // Keep Esc inside the dialog from also closing the drawer/palette underneath.
+        document.getElementById('ui-dialog').addEventListener('keydown', e => { if (e.key === 'Escape') e.stopPropagation(); });
+
+        function toast(message, type = 'error') {
+            const el = document.createElement('div');
+            el.className = `max-w-sm px-4 py-3 rounded shadow-lg text-sm text-slate-50 whitespace-pre-wrap ${type === 'error' ? 'bg-red-700' : type === 'success' ? 'bg-green-700' : 'bg-slate-700'}`;
+            el.textContent = message;
+            el.onclick = () => el.remove();
+            document.getElementById('ui-toasts').appendChild(el);
+            setTimeout(() => el.remove(), 5000);
         }
 
         function closeModal() {

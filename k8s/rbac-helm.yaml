@@ -1,0 +1,20 @@
+# OPTIONAL — not applied by deploy.sh.
+# Helm rollback/uninstall re-apply or delete whatever a chart contains, so the
+# in-cluster service account effectively needs cluster-admin for them to work.
+# The dashboard has no authentication: anyone who can reach it (e.g. via the
+# ingress) gets these rights. Apply only if that is acceptable:
+#   kubectl apply -f k8s/rbac-helm.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: k8s-dashboard-helm-admin
+  labels:
+    app: k8s-dashboard
+subjects:
+  - kind: ServiceAccount
+    name: k8s-dashboard
+    namespace: k8s-dashboard
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
