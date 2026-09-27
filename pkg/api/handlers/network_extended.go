@@ -29,3 +29,16 @@ func GetIngressClasses(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"items": result})
 }
+
+// GetIngressClassDetail returns a single ingress class
+func GetIngressClassDetail(c *gin.Context) {
+	if !checkLegacyClientAvailable(c) {
+		return
+	}
+	ic, err := k8s.InformerFactory.Networking().V1().IngressClasses().Lister().Get(c.Param("name"))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "IngressClass not found"})
+		return
+	}
+	c.JSON(http.StatusOK, ic)
+}

@@ -1781,119 +1781,133 @@
             });
         }
 
+        // Pod drawer helpers. All pod data is escaped; values are untrusted.
+        // Layout: every section is a card with a heading; facts are label/value
+        // rows in a .kv-grid so labels and values line up in columns.
+        const podKV = (label, value) => `<div class="kv-label">${label}</div><div class="kv-value">${value}</div>`;
+        const podSection = (title, body, count) => `
+            <div class="bg-slate-700 rounded p-4">
+                <h3 class="text-sm font-semibold text-k8s-blue mb-3">${title}${count != null ? ` <span class="text-slate-400 font-normal">(${count})</span>` : ''}</h3>
+                ${body}
+            </div>`;
+        const podSub = (title, body) => `<div class="mt-3"><div class="kv-sub">${title}</div>${body}</div>`;
+        const podChips = items => `<div class="flex flex-wrap gap-1.5">${items.map(i => `<span class="px-2 py-0.5 bg-slate-700 rounded text-xs">${escapeHtml(i)}</span>`).join('')}</div>`;
+        const podLines = items => `<pre class="code-block mono text-[11px] rounded p-2 whitespace-pre-wrap break-all">${items.map(escapeHtml).join('\n')}</pre>`;
+        const podShellQuote = a => /^[\w@%+=:,./-]+$/.test(a) ? a : `'${a.replace(/'/g, `'\\''`)}'`;
+        const podYesNo = b => b ? '<span class="text-yellow-400">Yes</span>' : 'No';
+
+        function podContainerHTML(c) {
+            const e = escapeHtml;
+            const argv = [...(c.command || []), ...(c.args || [])];
+            const probes = [['Liveness', c.probes?.liveness], ['Readiness', c.probes?.readiness], ['Startup', c.probes?.startup]].filter(([, v]) => v);
+            const req = Object.entries(c.resources?.requests || {}).map(([k, v]) => `${k}: ${v}`).join(', ');
+            const lim = Object.entries(c.resources?.limits || {}).map(([k, v]) => `${k}: ${v}`).join(', ');
+            const ls = c.lastState;
+            const env = [...(c.env || []).map(v => `${v.name}  ← ${v.source || 'literal'}`), ...(c.envFrom || []).map(f => `(all keys)  ← ${f}`)];
+            return `
+                <div class="bg-slate-600 rounded p-3">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <span class="font-medium text-white break-all">${e(c.name)}</span>
+                        <span class="text-xs px-2 py-1 rounded shrink-0 ${c.ready ? 'bg-green-600' : 'bg-red-600'}">${e(c.state || 'Unknown')}</span>
+                    </div>
+                    <div class="kv-grid text-xs">
+                        ${podKV('Image', `<span class="mono break-all">${e(c.image)}</span>`)}
+                        ${podKV('Pull Policy', e(c.imagePullPolicy || '-'))}
+                        ${podKV('Ready', c.ready ? 'Yes' : 'No')}
+                        ${podKV('Restarts', c.restartCount ? `<span class="text-yellow-400">${c.restartCount}</span>` : '0')}
+                        ${c.ports?.length ? podKV('Ports', e(c.ports.map(p => (p.name ? p.name + ' ' : '') + p.containerPort + '/' + p.protocol).join(', '))) : ''}
+                        ${req ? podKV('Requests', e(req)) : ''}
+                        ${lim ? podKV('Limits', e(lim)) : ''}
+                        ${c.workingDir ? podKV('Working Dir', `<span class="mono">${e(c.workingDir)}</span>`) : ''}
+                    </div>
+                    ${ls ? podSub('Last State', `<div class="rounded px-3 py-2 bg-red-900/40 border border-red-800 text-xs">
+                        <div class="kv-grid">
+                            ${podKV('Reason', `<span class="text-red-400 font-medium">${e(ls.reason || 'Terminated')}</span>`)}
+                            ${podKV('Exit Code', `${ls.exitCode}${ls.signal ? ` (signal ${ls.signal})` : ''}`)}
+                            ${podKV('Started', e(ls.startedAt || '-'))}
+                            ${podKV('Finished', e(ls.finishedAt || '-'))}
+                            ${ls.message ? podKV('Message', `<span class="whitespace-pre-wrap break-all">${e(ls.message)}</span>`) : ''}
+                        </div></div>`) : ''}
+                    ${argv.length ? podSub('Command &amp; Args', `<pre class="code-block mono text-[11px] rounded p-2 whitespace-pre-wrap break-all">${e(argv.map(podShellQuote).join(' \\\n    '))}</pre>`) : ''}
+                    ${probes.length ? podSub('Probes', `<div class="kv-grid text-xs">${probes.map(([k, v]) => podKV(k, `<span class="mono break-all">${e(v)}</span>`)).join('')}</div>`) : ''}
+                    ${c.securityContext?.length ? podSub('Security Context', podChips(c.securityContext)) : ''}
+                    ${env.length ? `<details class="mt-3"><summary class="kv-sub cursor-pointer">Environment (${env.length}) — values hidden</summary>${podLines(env)}</details>` : ''}
+                    ${c.volumeMounts?.length ? `<details class="mt-3"><summary class="kv-sub cursor-pointer">Volume Mounts (${c.volumeMounts.length})</summary>${podLines(c.volumeMounts.map(m => `${m.mountPath}  ← ${m.name}${m.readOnly ? '  (ro)' : ''}`))}</details>` : ''}
+                </div>`;
+        }
+
+        function podSchedulingHTML(sch) {
+            if (!sch) return '';
+            const ns = Object.entries(sch.nodeSelector || {}).map(([k, v]) => `${k}=${v}`);
+            const facts = [
+                sch.priorityClass || sch.priority != null ? podKV('Priority', escapeHtml(`${sch.priorityClass || '-'}${sch.priority != null ? ` (${sch.priority})` : ''}`)) : '',
+                sch.schedulerName ? podKV('Scheduler', escapeHtml(sch.schedulerName)) : '',
+                ns.length ? podKV('Node Selector', podChips(ns)) : '',
+            ].join('');
+            const body = (facts ? `<div class="kv-grid text-sm">${facts}</div>` : '')
+                + (sch.tolerations?.length ? podSub(`Tolerations (${sch.tolerations.length})`, podLines(sch.tolerations)) : '')
+                + (sch.affinity?.length ? podSub('Affinity', podLines(sch.affinity)) : '');
+            return body ? podSection('Scheduling', body) : '';
+        }
+
+        function podSettingsHTML(st) {
+            if (!st) return '';
+            return podSection('Pod Settings', `
+                <div class="kv-grid kv-grid-2 text-sm">
+                    ${podKV('Host Network', podYesNo(st.hostNetwork))}
+                    ${podKV('DNS Policy', escapeHtml(st.dnsPolicy || '-'))}
+                    ${podKV('Host PID', podYesNo(st.hostPID))}
+                    ${podKV('Grace Period', st.terminationGracePeriodSeconds != null ? `${st.terminationGracePeriodSeconds}s` : '-')}
+                    ${podKV('Host IPC', podYesNo(st.hostIPC))}
+                    ${podKV('SA Token', st.automountServiceAccountToken === false ? 'Not mounted' : 'Mounted')}
+                </div>
+                ${st.securityContext?.length ? podSub('Pod Security Context', podChips(st.securityContext)) : ''}`);
+        }
+
+        // Section order: identity → what runs → storage → placement → runtime → metadata.
         async function showPodDetail(namespace, name) {
             try {
                 const data = await fetchAPI(`${getClusterAPI()}/pods/${namespace}/${name}`);
+                const e = escapeHtml;
+                const labels = Object.entries(data.labels || {});
+                const annotations = Object.entries(data.annotations || {});
                 document.getElementById('modal-title').textContent = `Pod: ${namespace}/${name}`;
                 document.getElementById('modal-content').innerHTML = `
                     <div class="space-y-4">
-                        <!-- Basic Info -->
-                        <div class="bg-slate-700 rounded p-4">
-                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Basic Information</h3>
-                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                                <div><span class="text-slate-400">Status:</span> ${statusPillHTML(data.status)}</div>
-                                <div><span class="text-slate-400">Node:</span> ${data.node || '-'}</div>
-                                <div><span class="text-slate-400">Pod IP:</span> <span class="text-k8s-blue">${data.podIP || '-'}</span></div>
-                                <div><span class="text-slate-400">Host IP:</span> ${data.hostIP || '-'}</div>
-                                <div><span class="text-slate-400">QoS Class:</span> ${data.qosClass || '-'}</div>
-                                <div><span class="text-slate-400">Restart Policy:</span> ${data.restartPolicy || '-'}</div>
-                                <div><span class="text-slate-400">Service Account:</span> ${data.serviceAccount || '-'}</div>
-                                <div><span class="text-slate-400">Created:</span> ${data.createdAt || '-'}</div>
-                                <div><span class="text-slate-400">Age:</span> ${data.age || '-'}</div>
-                            </div>
-                        </div>
+                        ${podSection('Basic Information', `
+                            <div class="kv-grid kv-grid-2 text-sm">
+                                ${podKV('Status', statusPillHTML(data.status))}
+                                ${podKV('Age', e(data.age || '-'))}
+                                ${podKV('Node', e(data.node || '-'))}
+                                ${podKV('Created', e(data.createdAt || '-'))}
+                                ${podKV('Pod IP', `<span class="mono">${e(data.podIP || '-')}</span>`)}
+                                ${podKV('Host IP', `<span class="mono">${e(data.hostIP || '-')}</span>`)}
+                                ${podKV('QoS Class', e(data.qosClass || '-'))}
+                                ${podKV('Restart Policy', e(data.restartPolicy || '-'))}
+                                ${podKV('Service Account', e(data.serviceAccount || '-'))}
+                            </div>`)}
 
-                        <!-- Owner References -->
-                        ${data.ownerReferences?.length > 0 ? `
-                        <div class="bg-slate-700 rounded p-4">
-                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Controlled By</h3>
-                            <div class="space-y-1">
-                                ${data.ownerReferences.map(ref => `
-                                    <div class="text-sm"><span class="text-yellow-400">${ref.kind}</span>/<span class="text-white">${ref.name}</span></div>
-                                `).join('')}
-                            </div>
-                        </div>
-                        ` : ''}
+                        ${podSection('Containers', `<div class="space-y-3">${(data.containers || []).map(podContainerHTML).join('') || '<div class="text-slate-400 text-sm">No containers</div>'}</div>`, data.containers?.length || 0)}
 
-                        <!-- Conditions -->
-                        ${data.conditions?.length > 0 ? `
-                        <div class="bg-slate-700 rounded p-4">
-                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Conditions</h3>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-xs">
-                                    <thead><tr class="text-slate-400"><th class="text-left p-1">Type</th><th class="text-left p-1">Status</th><th class="text-left p-1">Reason</th></tr></thead>
-                                    <tbody>
-                                        ${data.conditions.map(c => `
-                                            <tr><td class="p-1">${c.type}</td><td class="p-1 ${c.status === 'True' ? 'text-green-400' : 'text-red-400'}">${c.status}</td><td class="p-1 text-slate-400">${c.reason || '-'}</td></tr>
-                                        `).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        ` : ''}
+                        ${data.initContainers?.length ? podSection('Init Containers', `<div class="space-y-3">${data.initContainers.map(podContainerHTML).join('')}</div>`, data.initContainers.length) : ''}
 
-                        <!-- Containers -->
-                        <div class="bg-slate-700 rounded p-4">
-                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Containers (${data.containers?.length || 0})</h3>
-                            <div class="space-y-3">
-                                ${data.containers?.map(c => `
-                                    <div class="bg-slate-600 rounded p-3">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="font-medium text-white">${c.name}</span>
-                                            <span class="text-xs px-2 py-1 rounded ${c.ready ? 'bg-green-600' : 'bg-red-600'}">${c.state || 'Unknown'}</span>
-                                        </div>
-                                        <div class="text-xs space-y-1">
-                                            <div><span class="text-slate-400">Image:</span> <span class="text-k8s-blue">${c.image}</span></div>
-                                            <div><span class="text-slate-400">Pull Policy:</span> ${c.imagePullPolicy || '-'}</div>
-                                            <div><span class="text-slate-400">Ready:</span> ${c.ready ? 'Yes' : 'No'} | <span class="text-slate-400">Restarts:</span> ${c.restartCount || 0}</div>
-                                            ${c.ports?.length > 0 ? `<div><span class="text-slate-400">Ports:</span> ${c.ports.map(p => p.containerPort + '/' + p.protocol).join(', ')}</div>` : ''}
-                                            ${c.resources?.requests && Object.keys(c.resources.requests).length > 0 ? `<div><span class="text-slate-400">Requests:</span> ${Object.entries(c.resources.requests).map(([k,v]) => k + ':' + v).join(', ')}</div>` : ''}
-                                            ${c.resources?.limits && Object.keys(c.resources.limits).length > 0 ? `<div><span class="text-slate-400">Limits:</span> ${Object.entries(c.resources.limits).map(([k,v]) => k + ':' + v).join(', ')}</div>` : ''}
-                                        </div>
-                                    </div>
-                                `).join('') || '<div class="text-slate-400">No containers</div>'}
-                            </div>
-                        </div>
+                        ${data.volumes?.length ? podSection('Volumes', `
+                            <div class="kv-grid text-xs">
+                                ${data.volumes.map(v => podKV(`<span class="text-white">${e(v.name)}</span>`, `<span class="text-yellow-400">${e(v.type)}</span>${v.source && v.source !== '-' ? ` <span class="mono text-slate-400 break-all">${e(v.source)}</span>` : ''}`)).join('')}
+                            </div>`, data.volumes.length) : ''}
 
-                        <!-- Init Containers -->
-                        ${data.initContainers?.length > 0 ? `
-                        <div class="bg-slate-700 rounded p-4">
-                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Init Containers (${data.initContainers.length})</h3>
-                            <div class="space-y-2">
-                                ${data.initContainers.map(c => `
-                                    <div class="bg-slate-600 rounded p-2 text-xs">
-                                        <span class="font-medium">${c.name}</span> - <span class="text-slate-400">${c.image}</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                        ` : ''}
+                        ${podSchedulingHTML(data.scheduling)}
+                        ${podSettingsHTML(data.settings)}
 
-                        <!-- Volumes -->
-                        ${data.volumes?.length > 0 ? `
-                        <div class="bg-slate-700 rounded p-4">
-                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Volumes (${data.volumes.length})</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                ${data.volumes.map(v => `
-                                    <div class="bg-slate-600 rounded p-2 text-xs">
-                                        <span class="font-medium text-white">${v.name}</span>
-                                        <span class="text-yellow-400 ml-2">${v.type}</span>
-                                        ${v.source !== '-' ? `<span class="text-slate-400 ml-1">(${v.source})</span>` : ''}
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                        ` : ''}
+                        ${labels.length ? podSection('Labels', podChips(labels.map(([k, v]) => `${k}: ${v}`)), labels.length) : ''}
 
-                        <!-- Labels -->
-                        ${data.labels && Object.keys(data.labels).length > 0 ? `
+                        ${annotations.length ? `
                         <div class="bg-slate-700 rounded p-4">
-                            <h3 class="text-sm font-semibold text-k8s-blue mb-3">Labels</h3>
-                            <div class="flex flex-wrap gap-2">
-                                ${Object.entries(data.labels).map(([k, v]) => `<span class="px-2 py-1 bg-slate-600 rounded text-xs">${k}: ${v}</span>`).join('')}
-                            </div>
-                        </div>
-                        ` : ''}
+                            <details>
+                                <summary class="cursor-pointer text-sm font-semibold text-k8s-blue">Annotations <span class="text-slate-400 font-normal">(${annotations.length})</span></summary>
+                                <pre class="code-block mono text-[11px] rounded p-2 mt-3 whitespace-pre-wrap break-all max-h-80 overflow-auto">${annotations.map(([k, v]) => e(`${k}: ${v}`)).join('\n')}</pre>
+                            </details>
+                        </div>` : ''}
                     </div>
                 `;
                 document.getElementById('detail-modal').classList.remove('hidden');
@@ -1923,7 +1937,7 @@
 
         // Deployment actions
         async function scaleDeployment(namespace, name) {
-            const num = await uiPromptReplicas('deployment', name);
+            const num = await uiPromptReplicas('deployment', namespace, name);
             if (num === null) return;
             try {
                 await fetch(`${getClusterAPI()}/deployments/${namespace}/${name}/scale`, {
@@ -1973,7 +1987,7 @@
 
         // StatefulSet actions
         async function scaleStatefulSet(namespace, name) {
-            const num = await uiPromptReplicas('statefulset', name);
+            const num = await uiPromptReplicas('statefulset', namespace, name);
             if (num === null) return;
             try {
                 await fetch(`${getClusterAPI()}/statefulsets/${namespace}/${name}/scale`, {
@@ -2462,7 +2476,7 @@
                     </div>
                     <div class="bg-slate-800 rounded-lg border border-slate-700">
                         ${renderTable([
-                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('replicasets', '${r.namespace}', '${r.name}')">${r.name}</span>` },
                     { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
                     { label: 'Desired', key: 'desired' },
                     { label: 'Current', key: 'current' },
@@ -2486,7 +2500,7 @@
                 title: 'Jobs',
                 namespaceFilter: true,
                 columns: [
-                    { label: 'Name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('jobs', '${r.namespace}', '${r.name}')">${r.name}</span>` },
                     { label: 'Namespace', class: 'cell-namespace', render: r => r.namespace || '' },
                     { label: 'Completions', render: r => r.completions || '' },
                     { label: 'Succeeded', render: r => r.succeeded ?? 0 },
@@ -2512,7 +2526,7 @@
                     </div>
                     <div class="bg-slate-800 rounded-lg border border-slate-700">
                         ${renderTable([
-                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('cronjobs', '${r.namespace}', '${r.name}')">${r.name}</span>` },
                     { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
                     { label: 'Schedule', key: 'schedule' },
                     { label: 'Suspend', key: 'suspend', render: r => r.suspend ? 'Yes' : 'No' },
@@ -2595,7 +2609,7 @@
                     </div>
                     <div class="bg-slate-800 rounded-lg border border-slate-700">
                         ${renderTable([
-                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('ingressclasses', null, '${r.name}')">${r.name}</span>` },
                     { label: 'Controller', key: 'controller' },
                     { label: 'Age', key: 'age', class: 'text-slate-400' }
                 ], getItems(data))}
@@ -2792,7 +2806,7 @@
                     </div>
                     <div class="bg-slate-800 rounded-lg border border-slate-700">
                         ${renderTable([
-                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('persistentvolumeclaims', '${r.namespace}', '${r.name}')">${r.name}</span>` },
                     { label: 'Namespace', key: 'namespace', class: 'cell-namespace' },
                     { label: 'Status', key: 'status', render: r => statusPillHTML(r.status) },
                     { label: 'Volume', key: 'volume' },
@@ -2820,7 +2834,7 @@
                     </div>
                     <div class="bg-slate-800 rounded-lg border border-slate-700">
                         ${renderTable([
-                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>` },
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('persistentvolumes', null, '${r.name}')">${r.name}</span>` },
                     { label: 'Capacity', key: 'capacity' },
                     { label: 'Reclaim Policy', key: 'reclaimPolicy' },
                     { label: 'Status', key: 'status', render: r => statusPillHTML(r.status) },
@@ -2848,7 +2862,7 @@
                     </div>
                     <div class="bg-slate-800 rounded-lg border border-slate-700">
                         ${renderTable([
-                    { label: 'Name', key: 'name', render: r => `<span class="cell-name">${r.name}</span>${r.isDefault ? ' <span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-k8s-blue/15 text-k8s-blue border border-k8s-blue/30">default</span>' : ''}` },
+                    { label: 'Name', key: 'name', render: r => `<span class="cell-name cursor-pointer hover:underline hover:text-k8s-blue" onclick="showResourceDetail('storageclasses', null, '${r.name}')">${r.name}</span>${r.isDefault ? ' <span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-k8s-blue/15 text-k8s-blue border border-k8s-blue/30">default</span>' : ''}` },
                     { label: 'Provisioner', key: 'provisioner' },
                     { label: 'Reclaim Policy', key: 'reclaimPolicy' },
                     { label: 'Volume Binding', key: 'volumeBinding' },
@@ -3095,6 +3109,85 @@
         }
 
         // Generic resource detail viewer
+        // Structured summary for kinds opened via showResourceDetail that return
+        // the raw Kubernetes object (jobs, cronjobs, replicasets, storage, ingress classes).
+        function resourceSpecHTML(type, d) {
+            const e = escapeHtml, spec = d.spec || {}, st = d.status || {}, ann = d.metadata?.annotations || {};
+            const kv = (label, v) => v === undefined || v === null || v === '' ? '' : podKV(label, e(String(v)));
+            const grid = rows => `<div class="kv-grid kv-grid-2 text-sm">${rows.join('')}</div>`;
+            const images = tpl => {
+                const cs = [...(tpl?.spec?.initContainers || []), ...(tpl?.spec?.containers || [])];
+                return cs.length ? podSub('Containers', podLines(cs.map(c => `${c.name}: ${c.image}`))) : '';
+            };
+            const ago = ts => ts ? `${ts} (${helmAge(ts)} ago)` : '';
+            const selector = sel => Object.entries(sel?.matchLabels || {}).map(([k, v]) => `${k}=${v}`);
+            switch (type) {
+                case 'replicasets': {
+                    const sel = selector(spec.selector);
+                    return podSection('Replica Set', grid([
+                        kv('Desired', spec.replicas ?? 0), kv('Current', st.replicas ?? 0),
+                        kv('Ready', st.readyReplicas ?? 0), kv('Available', st.availableReplicas ?? 0),
+                    ]) + (sel.length ? podSub('Selector', podChips(sel)) : '') + images(spec.template));
+                }
+                case 'jobs': {
+                    const cond = (st.conditions || []).find(c => c.status === 'True' && ['Complete', 'Failed', 'Suspended'].includes(c.type));
+                    const state = cond ? cond.type : (st.active ? 'Running' : 'Pending');
+                    const dur = st.startTime ? Math.round(((st.completionTime ? new Date(st.completionTime) : new Date()) - new Date(st.startTime)) / 1000) : null;
+                    return podSection('Job', grid([
+                        podKV('Status', statusPillHTML(state)), kv('Completions', `${st.succeeded || 0}/${spec.completions ?? 1}`),
+                        kv('Active', st.active || 0), kv('Failed', st.failed || 0),
+                        kv('Parallelism', spec.parallelism), kv('Backoff Limit', spec.backoffLimit),
+                        kv('Started', st.startTime), kv('Completed', st.completionTime),
+                        dur != null ? kv('Duration', dur < 60 ? `${dur}s` : `${Math.floor(dur / 60)}m ${dur % 60}s`) : '',
+                        kv('TTL After Finish', spec.ttlSecondsAfterFinished != null ? `${spec.ttlSecondsAfterFinished}s` : ''),
+                    ]) + (cond?.message ? podSub('Message', `<div class="text-sm">${e(cond.message)}</div>`) : '') + images(spec.template));
+                }
+                case 'cronjobs':
+                    return podSection('Cron Job', grid([
+                        podKV('Schedule', `<span class="mono">${e(spec.schedule || '-')}</span>`), kv('Time Zone', spec.timeZone || 'controller local'),
+                        podKV('Suspended', spec.suspend ? '<span class="text-yellow-400">Yes</span>' : 'No'), kv('Concurrency', spec.concurrencyPolicy || 'Allow'),
+                        kv('Active Jobs', (st.active || []).length), kv('Last Scheduled', ago(st.lastScheduleTime)),
+                        kv('Last Success', ago(st.lastSuccessfulTime)),
+                        kv('History Kept', `${spec.successfulJobsHistoryLimit ?? 3} ok / ${spec.failedJobsHistoryLimit ?? 1} failed`),
+                    ]) + ((st.active || []).length ? podSub('Running Jobs', podLines(st.active.map(j => j.name))) : '') + images(spec.jobTemplate?.spec?.template));
+                case 'persistentvolumeclaims':
+                    return podSection('Persistent Volume Claim', grid([
+                        podKV('Status', statusPillHTML(st.phase || '-')), kv('Capacity', st.capacity?.storage || '-'),
+                        kv('Requested', spec.resources?.requests?.storage), kv('Access Modes', (spec.accessModes || []).join(', ')),
+                        kv('Storage Class', spec.storageClassName), kv('Volume Mode', spec.volumeMode),
+                        podKV('Volume', spec.volumeName ? `<span class="cursor-pointer hover:underline" onclick="showResourceDetail('persistentvolumes', null, '${e(spec.volumeName)}')">${e(spec.volumeName)}</span>` : '-'),
+                    ]));
+                case 'persistentvolumes': {
+                    const src = ['csi', 'hostPath', 'local', 'nfs', 'iscsi', 'awsElasticBlockStore', 'gcePersistentDisk', 'azureDisk', 'cephfs', 'rbd'].find(k => spec[k]);
+                    const srcDetail = src === 'csi' ? `${spec.csi.driver} (${spec.csi.volumeHandle})` : src === 'hostPath' || src === 'local' ? spec[src].path
+                        : src === 'nfs' ? `${spec.nfs.server}:${spec.nfs.path}` : src || '';
+                    const claim = spec.claimRef ? `${spec.claimRef.namespace}/${spec.claimRef.name}` : '';
+                    return podSection('Persistent Volume', grid([
+                        podKV('Status', statusPillHTML(st.phase || '-')), kv('Capacity', spec.capacity?.storage),
+                        kv('Access Modes', (spec.accessModes || []).join(', ')), kv('Reclaim Policy', spec.persistentVolumeReclaimPolicy),
+                        kv('Storage Class', spec.storageClassName), kv('Volume Mode', spec.volumeMode),
+                        podKV('Claim', claim ? `<span class="cursor-pointer hover:underline" onclick="showResourceDetail('persistentvolumeclaims', '${e(spec.claimRef.namespace)}', '${e(spec.claimRef.name)}')">${e(claim)}</span>` : '-'),
+                    ]) + (src ? podSub('Source', `<div class="kv-grid text-sm">${podKV(e(src), `<span class="mono break-all">${e(srcDetail)}</span>`)}</div>`) : ''));
+                }
+                case 'storageclasses': {
+                    const params = Object.entries(d.parameters || {}).map(([k, v]) => `${k}: ${v}`);
+                    return podSection('Storage Class', grid([
+                        kv('Provisioner', d.provisioner), podKV('Default', ann['storageclass.kubernetes.io/is-default-class'] === 'true' ? '<span class="text-green-400">Yes</span>' : 'No'),
+                        kv('Reclaim Policy', d.reclaimPolicy || 'Delete'), kv('Binding Mode', d.volumeBindingMode || 'Immediate'),
+                        kv('Allow Expansion', d.allowVolumeExpansion ? 'Yes' : 'No'),
+                    ]) + (params.length ? podSub('Parameters', podLines(params)) : ''));
+                }
+                case 'ingressclasses': {
+                    const p = spec.parameters;
+                    return podSection('Ingress Class', grid([
+                        kv('Controller', spec.controller), podKV('Default', ann['ingressclass.kubernetes.io/is-default-class'] === 'true' ? '<span class="text-green-400">Yes</span>' : 'No'),
+                        p ? kv('Parameters', `${p.kind} ${p.namespace ? p.namespace + '/' : ''}${p.name}`) : '',
+                    ]));
+                }
+            }
+            return '';
+        }
+
         async function showResourceDetail(resourceType, namespace, name) {
             try {
                 let url = `${getClusterAPI()}/${resourceType}`;
@@ -3307,6 +3400,8 @@
                     `;
                 }
 
+                structuredContent = structuredContent || resourceSpecHTML(resourceType, data);
+
                 document.getElementById('modal-content').innerHTML = `
                     <div class="space-y-4">
                         <div class="bg-slate-700 rounded p-4">
@@ -3344,7 +3439,7 @@
                 `;
                 document.getElementById('detail-modal').classList.remove('hidden');
             } catch (err) {
-                console.error('Failed to load resource detail:', err);
+                toast('Error loading details: ' + err.message);
             }
         }
 
@@ -3598,9 +3693,15 @@
         }
         const uiConfirm = (title, message, opts) => uiDialog(title, message, opts);
         const uiPrompt = (title, message, input, opts) => uiDialog(title, message, { okText: 'OK', ...opts, input });
-        async function uiPromptReplicas(kind, name) {
-            const v = await uiPrompt(`Scale ${kind}`, `Scale ${kind} "${name}" to how many replicas?`,
-                { type: 'number', min: '0', step: '1', required: true, value: '1' }, { okText: 'Scale' });
+        async function uiPromptReplicas(kind, namespace, name) {
+            // Pre-fill with the current desired replicas (spec.replicas; unset means 1).
+            let current = 1;
+            try {
+                const obj = await fetchAPI(`${getClusterAPI()}/${kind}s/${namespace}/${name}`);
+                current = obj.spec?.replicas ?? 1;
+            } catch (_) { /* fall back to 1; the dialog still works */ }
+            const v = await uiPrompt(`Scale ${kind}`, `Scale ${kind} "${name}" to how many replicas? (currently ${current})`,
+                { type: 'number', min: '0', step: '1', required: true, value: String(current) }, { okText: 'Scale' });
             return v === null ? null : parseInt(v, 10);
         }
         // Keep Esc inside the dialog from also closing the drawer/palette underneath.

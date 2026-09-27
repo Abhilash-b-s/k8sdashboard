@@ -121,6 +121,7 @@ func SetupRouter() *gin.Engine {
 			cluster.GET("/ingresses", handlers.GetClusterIngresses)
 			cluster.GET("/ingresses/:namespace/:name", handlers.GetClusterIngressDetail)
 			cluster.GET("/ingressclasses", handlers.GetClusterIngressClasses)
+			cluster.GET("/ingressclasses/:name", handlers.GetClusterIngressClassDetail)
 
 			// Service - Network Policies
 			cluster.GET("/networkpolicies", handlers.GetClusterNetworkPolicies)
@@ -249,6 +250,7 @@ func SetupRouter() *gin.Engine {
 		api.GET("/ingresses", handlers.GetIngresses)
 		api.GET("/ingresses/:namespace/:name", handlers.GetIngressDetail)
 		api.GET("/ingressclasses", handlers.GetIngressClasses)
+		api.GET("/ingressclasses/:name", handlers.GetIngressClassDetail)
 
 		// Service - Network Policies
 		api.GET("/networkpolicies", handlers.GetNetworkPolicies)

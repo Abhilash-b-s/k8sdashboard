@@ -66,6 +66,21 @@ func GetClusterIngressDetail(c *gin.Context) {
 	c.JSON(http.StatusOK, ing)
 }
 
+func GetClusterIngressClassDetail(c *gin.Context) {
+	client := GetClusterClient(c)
+	if client == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "cluster client not found"})
+		return
+	}
+
+	ic, err := client.InformerFactory.Networking().V1().IngressClasses().Lister().Get(c.Param("name"))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "IngressClass not found"})
+		return
+	}
+	c.JSON(http.StatusOK, ic)
+}
+
 func GetClusterIngressClasses(c *gin.Context) {
 	client := GetClusterClient(c)
 	if client == nil {

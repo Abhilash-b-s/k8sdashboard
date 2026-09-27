@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"k8s-dashboard/pkg/k8s"
 
@@ -48,6 +47,10 @@ type ContainerDetail struct {
 	State           string            `json:"state,omitempty"`
 	Ready           bool              `json:"ready"`
 	RestartCount    int32             `json:"restartCount"`
+	LastState       *LastStateInfo    `json:"lastState,omitempty"`
+	Probes          ProbesInfo        `json:"probes"`
+	EnvFrom         []string          `json:"envFrom,omitempty"`
+	SecurityContext []string          `json:"securityContext,omitempty"`
 }
 
 // ContainerPort represents a port exposed by a container
@@ -59,8 +62,9 @@ type ContainerPort struct {
 
 // EnvVar represents an environment variable
 type EnvVar struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
+	Name   string `json:"name"`
+	Value  string `json:"value"`
+	Source string `json:"source,omitempty"`
 }
 
 // VolumeMount represents a volume mount
@@ -97,6 +101,8 @@ type PodDetailResponse struct {
 	Volumes         []VolumeInfo      `json:"volumes"`
 	CreatedAt       string            `json:"createdAt"`
 	Age             string            `json:"age"`
+	Scheduling      SchedulingInfo    `json:"scheduling"`
+	Settings        PodSettingsInfo   `json:"settings"`
 }
 
 // ConditionInfo represents a condition
@@ -128,153 +134,7 @@ func GetPodDetail(c *gin.Context) {
 		return
 	}
 
-	// Build container details
-	containers := make([]ContainerDetail, 0)
-	for i, container := range pod.Spec.Containers {
-		cd := ContainerDetail{
-			Name:            container.Name,
-			Image:           container.Image,
-			ImagePullPolicy: string(container.ImagePullPolicy),
-			Command:         container.Command,
-			Args:            container.Args,
-			WorkingDir:      container.WorkingDir,
-		}
-
-		// Ports
-		for _, port := range container.Ports {
-			cd.Ports = append(cd.Ports, ContainerPort{
-				Name:          port.Name,
-				ContainerPort: port.ContainerPort,
-				Protocol:      string(port.Protocol),
-			})
-		}
-
-		// Env vars (only names, not values for security)
-		for _, env := range container.Env {
-			cd.Env = append(cd.Env, EnvVar{Name: env.Name, Value: "[hidden]"})
-		}
-
-		// Volume mounts
-		for _, vm := range container.VolumeMounts {
-			cd.VolumeMounts = append(cd.VolumeMounts, VolumeMount{
-				Name:      vm.Name,
-				MountPath: vm.MountPath,
-				ReadOnly:  vm.ReadOnly,
-			})
-		}
-
-		// Resources
-		cd.Resources = ResourceRequirements{
-			Requests: make(map[string]string),
-			Limits:   make(map[string]string),
-		}
-		for k, v := range container.Resources.Requests {
-			cd.Resources.Requests[string(k)] = v.String()
-		}
-		for k, v := range container.Resources.Limits {
-			cd.Resources.Limits[string(k)] = v.String()
-		}
-
-		// Container status
-		if i < len(pod.Status.ContainerStatuses) {
-			status := pod.Status.ContainerStatuses[i]
-			cd.Ready = status.Ready
-			cd.RestartCount = status.RestartCount
-			if status.State.Running != nil {
-				cd.State = "Running"
-			} else if status.State.Waiting != nil {
-				cd.State = fmt.Sprintf("Waiting: %s", status.State.Waiting.Reason)
-			} else if status.State.Terminated != nil {
-				cd.State = fmt.Sprintf("Terminated: %s", status.State.Terminated.Reason)
-			}
-		}
-
-		containers = append(containers, cd)
-	}
-
-	// Build init container details
-	initContainers := make([]ContainerDetail, 0)
-	for _, container := range pod.Spec.InitContainers {
-		cd := ContainerDetail{
-			Name:            container.Name,
-			Image:           container.Image,
-			ImagePullPolicy: string(container.ImagePullPolicy),
-			Command:         container.Command,
-			Args:            container.Args,
-		}
-		initContainers = append(initContainers, cd)
-	}
-
-	// Build volume info
-	volumes := make([]VolumeInfo, 0)
-	for _, vol := range pod.Spec.Volumes {
-		vi := VolumeInfo{Name: vol.Name}
-		if vol.ConfigMap != nil {
-			vi.Type = "ConfigMap"
-			vi.Source = vol.ConfigMap.Name
-		} else if vol.Secret != nil {
-			vi.Type = "Secret"
-			vi.Source = vol.Secret.SecretName
-		} else if vol.PersistentVolumeClaim != nil {
-			vi.Type = "PVC"
-			vi.Source = vol.PersistentVolumeClaim.ClaimName
-		} else if vol.EmptyDir != nil {
-			vi.Type = "EmptyDir"
-			vi.Source = "-"
-		} else if vol.HostPath != nil {
-			vi.Type = "HostPath"
-			vi.Source = vol.HostPath.Path
-		} else {
-			vi.Type = "Other"
-			vi.Source = "-"
-		}
-		volumes = append(volumes, vi)
-	}
-
-	// Build owner references
-	ownerRefs := make([]OwnerReferenceInfo, 0)
-	for _, ref := range pod.OwnerReferences {
-		ownerRefs = append(ownerRefs, OwnerReferenceInfo{
-			Kind: ref.Kind,
-			Name: ref.Name,
-			UID:  string(ref.UID),
-		})
-	}
-
-	// Build conditions
-	conditions := make([]ConditionInfo, 0)
-	for _, cond := range pod.Status.Conditions {
-		conditions = append(conditions, ConditionInfo{
-			Type:    string(cond.Type),
-			Status:  string(cond.Status),
-			Reason:  cond.Reason,
-			Message: cond.Message,
-		})
-	}
-
-	response := PodDetailResponse{
-		Name:            pod.Name,
-		Namespace:       pod.Namespace,
-		UID:             string(pod.UID),
-		Node:            pod.Spec.NodeName,
-		Status:          string(pod.Status.Phase),
-		PodIP:           pod.Status.PodIP,
-		HostIP:          pod.Status.HostIP,
-		QOSClass:        string(pod.Status.QOSClass),
-		ServiceAccount:  pod.Spec.ServiceAccountName,
-		RestartPolicy:   string(pod.Spec.RestartPolicy),
-		Labels:          pod.Labels,
-		Annotations:     pod.Annotations,
-		OwnerReferences: ownerRefs,
-		Conditions:      conditions,
-		Containers:      containers,
-		InitContainers:  initContainers,
-		Volumes:         volumes,
-		CreatedAt:       pod.CreationTimestamp.Format("2006-01-02 15:04:05"),
-		Age:             FormatAge(pod.CreationTimestamp.Time),
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, buildPodDetail(pod))
 }
 
 // GetDaemonSetDetail returns detailed daemonset information
